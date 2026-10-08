@@ -18,6 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+verify_csrf();
+
 $mobile   = trim($_POST['mobile'] ?? '');
 $password = $_POST['password'] ?? '';
 

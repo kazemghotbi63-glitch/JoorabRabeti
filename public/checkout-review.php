@@ -268,6 +268,8 @@ $formatDeliveryDate = static function (
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $receiverName = trim(
         (string)(
@@ -1656,6 +1658,7 @@ ob_start();
             <form
                 method="post"
                 id="commitForm">
+                <?= csrf_field() ?>
 
                 <button
                     type="submit"

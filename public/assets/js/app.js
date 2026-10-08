@@ -7,7 +7,12 @@ function safeTarget(e) {
   return e.target instanceof Element ? e.target : null;
 }
 
-/* ══════════ آپدیت همه‌ی Badgeهای سبد ══════════ */
+/* ══════════ CSRF — توکن از <meta name="csrf-token"> ══════════ */
+function csrfHeaders(extra = {}) {
+  const token = document.querySelector('meta[name="csrf-token"]')?.content;
+  return token ? { ...extra, "X-CSRF-Token": token } : extra;
+}
+
 /* ══════════ آپدیت همه‌ی Badgeهای سبد ══════════ */
 window.updateCartBadges = function (count) {
   if (count === undefined || count === null) return;
@@ -202,7 +207,11 @@ document.addEventListener("click", async (e) => {
     fd.append("product_id", pid);
     fd.append("qty", qty);
 
-    const res = await fetch("/api/cart", { method: "POST", body: fd });
+    const res = await fetch("/api/cart", {
+      method: "POST",
+      body: fd,
+      headers: csrfHeaders(),
+    });
     const data = await res.json();
 
     if (res.status === 401) {
@@ -348,7 +357,7 @@ paneLogin?.addEventListener("submit", async (e) => {
     const res = await fetch("/api/login.php", {
       method: "POST",
       body: fd,
-      headers: { Accept: "application/json" },
+      headers: csrfHeaders({ Accept: "application/json" }),
     });
 
     const raw = await res.text();
@@ -491,7 +500,7 @@ document
       const res = await fetch("/api/register.php", {
         method: "POST",
         body: fd,
-        headers: { Accept: "application/json" },
+        headers: csrfHeaders({ Accept: "application/json" }),
       });
 
       const raw = await res.text();
@@ -605,6 +614,7 @@ document
       const res = await fetch("/api/forgot-password", {
         method: "POST",
         body: fd,
+        headers: csrfHeaders(),
       });
 
       const data = await res.json();
@@ -665,6 +675,7 @@ document
       const res = await fetch("/api/forgot-password", {
         method: "POST",
         body: fd,
+        headers: csrfHeaders(),
       });
 
       const data = await res.json();

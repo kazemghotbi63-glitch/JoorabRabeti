@@ -8,6 +8,8 @@ require_admin();
 
 /* تغییر وضعیت (فاز بک‌اند با امنیت کامل می‌شود) */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
     $id     = (int)($_POST['id'] ?? 0);
     $status = $_POST['status'] ?? '';
     $allowed = ['new','in_review','quoted','converted','rejected'];
@@ -49,6 +51,7 @@ ob_start();
                 <td>
                     <span class="st-badge st-<?= $r['status'] ?>"><?= $statusLabels[$r['status']] ?></span><br><br>
                     <form method="post" style="display:flex;gap:6px;">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="id" value="<?= $r['id'] ?>">
                         <select name="status" style="font-size:.75rem;padding:6px;border:1px solid var(--card-border);border-radius:8px;">
                             <?php foreach ($statusLabels as $key => $lbl): ?>

@@ -18,6 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+verify_csrf();
+
 $invoiceNumber = trim((string)($_POST['invoice_number'] ?? ''));
 $sheba = strtoupper(preg_replace('/\s+/', '', (string)($_POST['sheba'] ?? '')));
 $holder = trim((string)($_POST['account_holder'] ?? ''));

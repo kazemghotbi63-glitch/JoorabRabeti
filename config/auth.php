@@ -55,28 +55,55 @@ function csrf_token(): string
 }
 
 /**
- * اعتبارسنجی توکن CSRF ارسال‌شده.
+ * فیلد مخفی CSRF برای فرم‌های POST.
+ */
+function csrf_field(): string
+{
+    return '<input type="hidden" name="csrf_token" value="'
+        . htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8')
+        . '">';
+}
+
+/**
+ * اعتبارسنجی توکن CSRF ارسال‌شده (فیلد csrf_token یا هدر X-CSRF-Token).
  *
- * در صورت نامعتبر بودن، درخواست متوقف می‌شود.
+ * در صورت نامعتبر بودن، درخواست با کد 403 متوقف می‌شود (Apache کد 419 را به 500 تبدیل می‌کند)؛
+ * برای درخواست‌های API/AJAX پاسخ JSON برمی‌گردد.
  */
 function verify_csrf(?string $token = null): void
 {
     $token = $token
-        ?? ($_POST['csrf_token'] ?? null);
+        ?? ($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
 
     $sessionToken = $_SESSION['csrf_token'] ?? null;
 
     if (
-        !is_string($token)
-        || $token === ''
-        || !is_string($sessionToken)
-        || $sessionToken === ''
-        || !hash_equals($sessionToken, $token)
+        is_string($token)
+        && $token !== ''
+        && is_string($sessionToken)
+        && $sessionToken !== ''
+        && hash_equals($sessionToken, $token)
     ) {
-        http_response_code(419);
-
-        exit('درخواست نامعتبر یا منقضی شده است. صفحه را دوباره بارگذاری کنید.');
+        return;
     }
+
+    $message = 'درخواست نامعتبر یا منقضی شده است. صفحه را دوباره بارگذاری کنید.';
+
+    $path = (string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+
+    $wantsJson = str_starts_with($path, '/api/')
+        || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
+        || ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
+
+    http_response_code(403);
+
+    if ($wantsJson) {
+        header('Content-Type: application/json; charset=utf-8');
+        exit(json_encode(['ok' => false, 'error' => $message], JSON_UNESCAPED_UNICODE));
+    }
+
+    header('Content-Type: text/plain; charset=utf-8');
+    exit($message);
 }
 
 

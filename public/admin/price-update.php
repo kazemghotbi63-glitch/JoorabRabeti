@@ -24,6 +24,8 @@ $applied = false;
 
 /* ═══ پیش‌نمایش تغییرات (بدون ذخیره) ═══ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'preview') {
+    verify_csrf();
+
     $mode     = $_POST['mode'] ?? 'percent';           // percent | amount
     $value    = (int)($_POST['value'] ?? 0);
     $sign     = ($_POST['sign'] ?? 'increase') === 'decrease' ? -1 : 1;
@@ -102,6 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'preview')
 
 /* ═══ اعمال نهایی ═══ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'apply') {
+    verify_csrf();
+
 
     $changes = json_decode((string)($_POST['changes'] ?? '[]'), true);
 
@@ -165,6 +169,7 @@ ob_start();
 <!-- ═══ فرم تنظیم تغییر ═══ -->
 <div class="admin-card" style="padding:18px;margin-bottom:20px;">
     <form method="post">
+        <?= csrf_field() ?>
         <input type="hidden" name="do" value="preview">
 
         <div style="display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin-bottom:14px;">
@@ -275,6 +280,7 @@ ob_start();
 
         <!-- فرم تأیید نهایی — تغییرات در فیلد مخفی -->
         <form method="post" onsubmit="return confirm('قیمت <?= count($preview['items']) ?> محصول اعمال شود؟ این عملیات قابل بازگشت فوری نیست.');">
+            <?= csrf_field() ?>
             <input type="hidden" name="do" value="apply">
             <input type="hidden" name="changes" value='<?= $h(json_encode($preview['items'], JSON_UNESCAPED_UNICODE)) ?>'>
             <button type="submit" class="btn btn-orange" style="padding:12px 28px;font-size:.85rem;">

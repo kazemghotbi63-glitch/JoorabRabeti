@@ -1,11 +1,14 @@
 <?php
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
+require_once ROOT_PATH . '/config/auth.php';
 
 $errors = [];
 $saved  = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $name    = trim($_POST['name'] ?? '');
     $mobile  = trim($_POST['mobile'] ?? '');
@@ -145,6 +148,7 @@ ob_start();
             </div>
 
             <form class="contact-form" method="post" action="/contact" novalidate>
+                <?= csrf_field() ?>
 
                 <?php if ($errors): ?>
                     <div class="form-alert">

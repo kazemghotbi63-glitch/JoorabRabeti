@@ -131,6 +131,8 @@ $error = '';
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $method = trim(
         (string)($_POST['method'] ?? '')
@@ -368,6 +370,7 @@ ob_start();
     method="post"
     class="co-form shipping-form"
     id="shippingForm">
+    <?= csrf_field() ?>
 
     <?php foreach ($options['methods'] as $mKey => $m): ?>
 

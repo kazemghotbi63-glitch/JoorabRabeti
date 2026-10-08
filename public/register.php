@@ -23,6 +23,8 @@ $mobile =
     trim($_POST['mobile'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $mobileMap = [
         '۰' => '0',
@@ -346,6 +348,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 method="post"
                 action="/register"
                 novalidate>
+                <?= csrf_field() ?>
 
                 <div class="register-field">
 

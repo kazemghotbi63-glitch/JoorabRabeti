@@ -26,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     ], 405);
 }
 
+verify_csrf();
+
 try {
     $fullName = trim($_POST['full_name'] ?? '');
     $companyName = trim($_POST['company_name'] ?? '');

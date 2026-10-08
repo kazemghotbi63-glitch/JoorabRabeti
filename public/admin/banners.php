@@ -11,6 +11,8 @@ require_admin();
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $do = $_POST['do'] ?? '';
 
@@ -565,6 +567,7 @@ ob_start();
                 method="post"
                 enctype="multipart/form-data"
                 class="banner-card">
+                <?= csrf_field() ?>
 
                 <input type="hidden" name="do" value="save">
                 <input type="hidden" name="id" value="<?= (int)$b['id'] ?>">
@@ -828,6 +831,7 @@ ob_start();
         <form
             method="post"
             enctype="multipart/form-data">
+            <?= csrf_field() ?>
 
             <input
                 type="hidden"

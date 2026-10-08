@@ -48,6 +48,8 @@ function cartCount(PDO $db, int $cartId): int {
 
 if ($method === 'POST') {
 
+    verify_csrf();
+
     $productId = (int)($_POST['product_id'] ?? 0);
     $qty       = max(1, (int)($_POST['qty'] ?? 1));
 

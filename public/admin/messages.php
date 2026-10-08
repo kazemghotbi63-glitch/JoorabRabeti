@@ -8,6 +8,8 @@ require_admin();
 
 /* علامت‌گذاری به‌عنوان خوانده‌شده */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
     $id = (int)($_POST['id'] ?? 0);
     if ($id > 0) {
         db()->prepare("UPDATE contact_messages SET status='read' WHERE id=?")->execute([$id]);
@@ -48,6 +50,7 @@ ob_start();
                         <td>
                             <?php if ($m['status'] === 'new'): ?>
                                 <form method="post">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="id" value="<?= $m['id'] ?>">
                                     <button class="btn btn-orange" style="padding:6px 14px;font-size:.72rem;">خوانده شد</button>
                                 </form>

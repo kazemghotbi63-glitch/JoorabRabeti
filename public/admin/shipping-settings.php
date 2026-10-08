@@ -133,6 +133,8 @@ $jalaliToGreg = static function (int $jy, int $jm, int $jd): array {
 
 /* ═══ ذخیره ═══ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $updated = 0;
 
@@ -280,6 +282,7 @@ ob_start();
     <?php if ($success): ?><div class="finc-alert ok">✅ <?= $h($success) ?></div><?php endif; ?>
 
     <form method="post">
+        <?= csrf_field() ?>
 
         <?php
         $groups = [];
