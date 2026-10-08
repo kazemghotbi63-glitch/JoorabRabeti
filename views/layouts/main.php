@@ -67,7 +67,19 @@ if (is_logged_in()) {
     <meta name="description" content="<?= htmlspecialchars($pageDescription ?? 'فروشگاه تخصصی خرید عمده جوراب رابطی — تولید مستقیم، قیمت همکاری، موجودی واقعی و سفارش سریع', ENT_QUOTES, 'UTF-8') ?>">
     <meta name="author" content="RABETI">
     <meta name="theme-color" content="#004f53">
-    <link rel="canonical" href="https://jorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
+    <?php
+    /* canonical بدون query string؛ صفحه‌ها می‌توانند $canonicalPath را خودشان تعیین کنند */
+    if (!isset($canonicalPath)) {
+        $canonicalPath = (string)parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+        $canonicalPath = rtrim((string)preg_replace('~(/index)?\.php$~', '', $canonicalPath), '/');
+        $canonicalPath = $canonicalPath === '' ? '/' : $canonicalPath;
+    }
+    $canonicalUrl = SITE_URL . $canonicalPath;
+    ?>
+    <link rel="canonical" href="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') ?>">
+    <?php if (!empty($metaRobots)): ?>
+        <meta name="robots" content="<?= htmlspecialchars($metaRobots, ENT_QUOTES, 'UTF-8') ?>">
+    <?php endif; ?>
 
     <!-- ═══ Open Graph ═══ -->
     <meta property="og:type" content="website">
@@ -75,7 +87,7 @@ if (is_logged_in()) {
     <meta property="og:title" content="<?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:description" content="<?= htmlspecialchars($pageDescription ?? 'فروشگاه تخصصی خرید عمده جوراب رابطی', ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:locale" content="fa_IR">
-    <meta property="og:url" content="https://jorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:url" content="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:image" content="https://jorabrabeti.ir/Image/logo3.jpg">
     <meta property="og:image:width" content="512">
     <meta property="og:image:height" content="512">

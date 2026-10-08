@@ -35,6 +35,7 @@ if (!$product) {
     http_response_code(404);
 
     $pageTitle = 'محصول یافت نشد';
+    $metaRobots = 'noindex';
 
     ob_start();
 ?>
@@ -140,6 +141,7 @@ $inStock  = $stock >= $moq;
 $lowStock = $inStock && $stock < ($moq * 2);
 
 $pageTitle = $product['name'] . ' | جوراب رابطی';
+$canonicalPath = '/product/' . rawurlencode($product['slug']);
 $pageDescription = mb_substr(
     trim((string)($product['description'] ?? '')),
     0,
