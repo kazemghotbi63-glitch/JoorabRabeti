@@ -146,6 +146,81 @@ $pageDescription = mb_substr(
     155
 );
 
+/* ═══════════════ JSON-LD: Product + BreadcrumbList ═══════════════ */
+
+$productUrl = SITE_URL . '/product/' . rawurlencode($product['slug']);
+
+/* قیمت‌ها به تومان ذخیره شده‌اند؛ schema.org کد ISO می‌خواهد → ریال (×۱۰) */
+$irrPrices = array_values(array_filter(
+    array_map(static fn($r) => (float)$r['price'] * 10, $prices),
+    static fn($p) => $p > 0
+));
+
+$productLd = [
+    '@context' => 'https://schema.org',
+    '@type'    => 'Product',
+    'name'     => $product['name'],
+    'sku'      => (string)($product['code'] ?? ''),
+    'url'      => $productUrl,
+    'brand'    => ['@type' => 'Brand', 'name' => 'رابطی'],
+    'category' => $product['cat_name'],
+];
+
+if ($pageDescription !== '') {
+    $productLd['description'] = $pageDescription;
+}
+
+$ldImages = [];
+foreach ($productImages as $img) {
+    if (str_starts_with((string)$img['image_path'], '/')) {
+        $ldImages[] = SITE_URL . $img['image_path'];
+    }
+}
+if ($ldImages) {
+    $productLd['image'] = $ldImages;
+}
+
+if ($irrPrices) {
+    $productLd['offers'] = [
+        '@type'            => count($irrPrices) > 1 ? 'AggregateOffer' : 'Offer',
+        'priceCurrency'    => 'IRR',
+        'availability'     => $inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        'url'              => $productUrl,
+        'eligibleQuantity' => ['@type' => 'QuantitativeValue', 'minValue' => $moq],
+        'seller'           => ['@type' => 'Organization', 'name' => 'رابطی'],
+    ];
+    if (count($irrPrices) > 1) {
+        $productLd['offers']['lowPrice']   = min($irrPrices);
+        $productLd['offers']['highPrice']  = max($irrPrices);
+        $productLd['offers']['offerCount'] = count($irrPrices);
+    } else {
+        $productLd['offers']['price'] = $irrPrices[0];
+    }
+}
+
+$crumbs = [
+    ['خانه', SITE_URL . '/'],
+    ['محصولات', SITE_URL . '/products'],
+];
+if (!empty($product['parent_slug'])) {
+    $crumbs[] = [$product['parent_name'], SITE_URL . '/products?cat=' . rawurlencode($product['parent_slug'])];
+}
+$crumbs[] = [$product['cat_name'], SITE_URL . '/products?cat=' . rawurlencode($product['cat_slug'])];
+$crumbs[] = [$product['name'], $productUrl];
+
+$jsonLd = [
+    $productLd,
+    [
+        '@context'        => 'https://schema.org',
+        '@type'           => 'BreadcrumbList',
+        'itemListElement' => array_map(
+            static fn($c, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $c[0], 'item' => $c[1]],
+            $crumbs,
+            array_keys($crumbs)
+        ),
+    ],
+];
+
 ob_start();
 ?>
 
