@@ -20,3 +20,8 @@ if (!defined('APP_TIMEZONE')) {
     define('APP_TIMEZONE', 'Asia/Tehran');
 }
 date_default_timezone_set(APP_TIMEZONE);
+
+/* آدرس اصلی سایت — canonical، sitemap و JSON-LD */
+if (!defined('SITE_URL')) {
+    define('SITE_URL', 'https://jorabrabeti.ir');
+}

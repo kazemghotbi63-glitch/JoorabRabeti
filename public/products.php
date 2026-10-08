@@ -29,6 +29,7 @@ if ($catSlug !== '') {
         http_response_code(404);
 
         $pageTitle = 'دسته یافت نشد';
+        $metaRobots = 'noindex';
 
         ob_start();
 ?>
@@ -189,6 +190,15 @@ $pageTitle =
     . 'کاتالوگ محصولات | رابطی';
 
 $pageDescription = 'خرید عمده جوراب مردانه، زنانه، بچگانه و اسپرت رابطی با موجودی واقعی و قیمت همکاری.';
+
+/* صفحه دسته یک URL مستقل است؛ نتایج جستجو ایندکس نشوند */
+$canonicalPath = $activeCat
+    ? '/products?cat=' . rawurlencode($activeCat['slug'])
+    : '/products';
+
+if ($searchQuery !== '') {
+    $metaRobots = 'noindex, follow';
+}
 
 ob_start();
 ?>
