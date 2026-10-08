@@ -1,0 +1,457 @@
+/* ═══════════════════════════════════════════════════════
+   Instagram Gallery — Rabati (Carousel Edition)
+   ═══════════════════════════════════════════════════════ */
+
+.r6-ig {
+  background: #f7f7f3;
+  padding: 72px 24px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.r6-ig-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* ═══════════ HEAD ═══════════ */
+
+.r6-ig-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 36px;
+  flex-wrap: wrap;
+}
+
+.r6-ig-head-l {
+  max-width: 620px;
+}
+
+.r6-ig-eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #e58a24;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+  position: relative;
+  padding-inline-start: 22px;
+}
+
+.r6-ig-eyebrow::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 3px;
+  background: #e58a24;
+  border-radius: 2px;
+}
+
+.r6-ig-head h2 {
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 800;
+  color: #183236;
+  margin: 0 0 6px;
+}
+
+.r6-ig-head p {
+  color: #65777a;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.r6-ig-head-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #fff;
+  color: #00666b;
+  border: 1px solid rgba(0, 102, 107, 0.15);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.r6-ig-head-link:hover {
+  background: #00666b;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CAROUSEL — Track
+   ═══════════════════════════════════════════════════════ */
+
+.r6-ig-carousel {
+  position: relative;
+}
+
+.r6-ig-track {
+  display: grid;
+  grid-template-rows: repeat(2, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 48px) / 4);
+  gap: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 4px 0 8px;
+  box-sizing: border-box;
+}
+
+.r6-ig-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══════════ ITEM ═══════════ */
+
+.r6-ig-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #e8f5f4, #d6eef0);
+  text-decoration: none;
+  display: block;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.r6-ig-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(0, 102, 107, 0.18);
+}
+
+.r6-ig-item img,
+.r6-ig-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s ease;
+}
+
+.r6-ig-item:hover img,
+.r6-ig-item:hover video {
+  transform: scale(1.06);
+}
+
+.r6-ig-video-icon {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: #00666b;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.r6-ig-video-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.r6-ig-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 79, 83, 0.85) 0%,
+    rgba(0, 79, 83, 0.25) 45%,
+    transparent 70%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: #fff;
+  pointer-events: none;
+}
+
+.r6-ig-item:hover .r6-ig-overlay {
+  opacity: 1;
+}
+
+.r6-ig-overlay svg {
+  width: 22px;
+  height: 22px;
+  margin-bottom: 6px;
+}
+
+.r6-ig-overlay span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════
+   GRID — برای ≤ ۸ عکس
+   ═══════════════════════════════════════════════════════ */
+
+.r6-ig-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.r6-ig-grid .r6-ig-item {
+  aspect-ratio: 1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   NAV ROW — فلش + دات
+   ═══════════════════════════════════════════════════════ */
+
+.r6-ig-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.r6-ig-nav {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 102, 107, 0.15);
+  background: #fff;
+  color: #00666b;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.r6-ig-nav svg {
+  width: 20px;
+  height: 20px;
+}
+
+.r6-ig-nav:hover:not(:disabled) {
+  background: #00666b;
+  color: #fff;
+  border-color: #00666b;
+  transform: scale(1.06);
+}
+
+.r6-ig-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.r6-ig-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.r6-ig-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0, 102, 107, 0.22);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.r6-ig-dot:hover {
+  background: rgba(0, 102, 107, 0.45);
+}
+
+.r6-ig-dot.is-active {
+  background: #00666b;
+  width: 24px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   LIGHTBOX
+   ═══════════════════════════════════════════════════════ */
+
+.r6-ig-lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 25, 30, 0.94);
+  z-index: 2147483647;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px 80px;
+  box-sizing: border-box;
+}
+
+.r6-ig-lightbox.is-open {
+  display: flex;
+}
+
+.r6-ig-lb-stage {
+  max-width: 92vw;
+  max-height: calc(100vh - 140px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.r6-ig-lb-stage img,
+.r6-ig-lb-stage video {
+  max-width: 92vw;
+  max-height: calc(100vh - 140px);
+  width: auto;
+  height: auto;
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  display: block;
+}
+
+.r6-ig-lb-caption {
+  margin-top: 18px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  max-width: 720px;
+  line-height: 1.7;
+}
+
+.r6-ig-lb-close {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+
+.r6-ig-lb-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.08);
+}
+
+.r6-ig-lb-close svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  .r6-ig-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .r6-ig-track {
+    grid-auto-columns: calc((100% - 24px) / 3);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .r6-ig {
+    padding: 48px 16px;
+  }
+
+  .r6-ig-head {
+    margin-bottom: 22px;
+  }
+  .r6-ig-head h2 {
+    font-size: 1.15rem;
+  }
+
+  .r6-ig-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .r6-ig-track {
+    grid-auto-columns: calc((100% - 16px) / 3);
+    gap: 8px;
+  }
+
+  .r6-ig-item {
+    border-radius: 12px;
+  }
+
+  .r6-ig-nav {
+    width: 38px;
+    height: 38px;
+  }
+  .r6-ig-nav svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .r6-ig-nav-row {
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .r6-ig-dot {
+    width: 7px;
+    height: 7px;
+  }
+  .r6-ig-dot.is-active {
+    width: 20px;
+  }
+
+  .r6-ig-lightbox {
+    padding: 50px 12px 60px;
+  }
+  .r6-ig-lb-close {
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r6-ig-track {
+    scroll-behavior: auto;
+  }
+}

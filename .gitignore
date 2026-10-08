@@ -1,0 +1,44 @@
+﻿# Composer
+/vendor/
+composer.phar
+composer
+composer.bat
+
+# Environment
+.env
+.env.local
+
+# فایل‌های تست و دیباگ
+check1.txt
+check2.txt
+*.bak
+*.bak-sms
+*.before-*.bak
+sms-debug.txt
+used-classes.txt
+utputFormat
+database/fix-settings.sql
+database/test-sms.json
+config/upload.php.bak
+public/test-sms.php
+public/test-sms-service.php
+public/uploads/receipts/
+
+# rar/zip
+*.rar
+*.zip
+*.7z
+
+# لاگ‌ها
+*.log
+logs/
+
+# سیستم‌عامل
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ادیتور
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,780 @@
+/* ═══════════════════════════════════════════════════════
+   Product Gallery 3D — Premium
+   ═══════════════════════════════════════════════════════ */
+
+.pdg-wrap {
+  display: grid;
+  grid-template-columns: 1fr 88px;
+  gap: 16px;
+  max-width: 100%;
+  perspective: 1400px;
+}
+
+/* ═══ عکس اصلی ═══ */
+
+.pdg-main {
+  position: relative;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #f3faf9 0%, #e8f5f4 100%);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow:
+    0 4px 8px rgba(0, 102, 107, 0.04),
+    0 16px 40px rgba(0, 102, 107, 0.1);
+  border: 1px solid rgba(0, 102, 107, 0.08);
+  transition: box-shadow 0.4s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+  cursor: zoom-in;
+}
+
+.pdg-main:hover {
+  box-shadow:
+    0 8px 16px rgba(0, 102, 107, 0.06),
+    0 24px 60px rgba(0, 102, 107, 0.16);
+}
+
+.pdg-main.is-tilting {
+  transition: none;
+  cursor: crosshair;
+}
+
+.pdg-slides {
+  position: absolute;
+  inset: 0;
+}
+
+.pdg-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.5s ease,
+    visibility 0.5s ease,
+    transform 0.5s ease;
+  transform: scale(1.04);
+}
+
+.pdg-slide.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.pdg-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* درخشش تزئینی */
+.pdg-shine {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0) 45%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.pdg-main:hover .pdg-shine {
+  opacity: 1;
+}
+
+/* بج تعداد عکس */
+.pdg-counter {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 3;
+  letter-spacing: 0.4px;
+}
+
+/* بج موجودی/ناموجود */
+.pdg-stock-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  z-index: 3;
+  backdrop-filter: blur(10px);
+}
+
+.pdg-stock-badge.ok {
+  background: rgba(46, 139, 87, 0.92);
+}
+.pdg-stock-badge.warn {
+  background: rgba(229, 138, 36, 0.92);
+}
+.pdg-stock-badge.out {
+  background: rgba(197, 61, 61, 0.92);
+}
+
+/* دکمه بزرگنمایی */
+.pdg-zoom-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #00666b;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: all 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.pdg-main:hover .pdg-zoom-hint {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.pdg-zoom-hint svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ═══ تامنیل‌ها ═══ */
+
+.pdg-thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 100%;
+}
+
+.pdg-thumb {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f3faf9;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 102, 107, 0.06);
+}
+
+.pdg-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.pdg-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 102, 107, 0);
+  transition: background 0.25s ease;
+  pointer-events: none;
+}
+
+.pdg-thumb:hover {
+  transform: translateX(-3px);
+  box-shadow: 0 6px 16px rgba(0, 102, 107, 0.14);
+}
+
+.pdg-thumb:hover::after {
+  background: rgba(0, 102, 107, 0.08);
+}
+
+.pdg-thumb.is-active {
+  border-color: #00666b;
+  box-shadow:
+    0 0 0 3px rgba(0, 102, 107, 0.15),
+    0 8px 20px rgba(0, 102, 107, 0.18);
+  transform: translateX(-3px);
+}
+
+.pdg-thumb.is-active::after {
+  background: rgba(0, 102, 107, 0.1);
+}
+
+.pdg-thumb:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 102, 107, 0.35);
+}
+
+/* ═══ نقطه‌های اسلایدر (فقط موبایل) ═══ */
+
+.pdg-dots {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  position: relative;
+  z-index: 3;
+}
+
+.pdg-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0, 102, 107, 0.22);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pdg-dot.is-active {
+  background: #00666b;
+  width: 24px;
+}
+
+/* ═══ فلش‌های ناوبری (روی عکس، موبایل) ═══ */
+
+.pdg-nav {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #00666b;
+  border: none;
+  cursor: pointer;
+  z-index: 4;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(8px);
+  transition: all 0.25s ease;
+}
+
+.pdg-nav:hover {
+  background: #00666b;
+  color: #fff;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.pdg-nav.prev {
+  left: 12px;
+}
+.pdg-nav.next {
+  right: 12px;
+}
+
+.pdg-nav svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ═══ Lightbox ═══ */
+
+.pdg-lb {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 18, 22, 0.95);
+  z-index: 2147483647;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  box-sizing: border-box;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pdg-lb.is-open {
+  display: flex;
+  opacity: 1;
+}
+
+.pdg-lb-img {
+  max-width: 92vw;
+  max-height: calc(100vh - 120px);
+  border-radius: 18px;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+  display: block;
+  transform: scale(0.9);
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 0.3s ease;
+}
+
+.pdg-lb.is-open .pdg-lb-img {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.pdg-lb-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.25s ease;
+}
+
+.pdg-lb-close:hover {
+  background: rgba(255, 255, 255, 0.26);
+  transform: scale(1.08) rotate(90deg);
+}
+
+.pdg-lb-close svg {
+  width: 22px;
+  height: 22px;
+}
+
+.pdg-lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.25s ease;
+  z-index: 2;
+}
+
+.pdg-lb-nav:hover {
+  background: rgba(255, 255, 255, 0.26);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.pdg-lb-nav.prev {
+  left: 20px;
+}
+.pdg-lb-nav.next {
+  right: 20px;
+}
+
+.pdg-lb-nav svg {
+  width: 24px;
+  height: 24px;
+}
+
+.pdg-lb-counter {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  letter-spacing: 0.5px;
+}
+
+.pdg-lb-caption {
+  position: absolute;
+  bottom: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.82rem;
+  text-align: center;
+  max-width: 620px;
+  padding: 0 20px;
+}
+
+/* ═══ حالت خالی ═══ */
+
+.pdg-empty {
+  position: relative;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #f3faf9 0%, #e8f5f4 100%);
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #65777a;
+  border: 2px dashed rgba(0, 102, 107, 0.15);
+}
+
+.pdg-empty svg {
+  width: 64px;
+  height: 64px;
+  opacity: 0.35;
+}
+
+.pdg-empty span {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════
+   موبایل
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .pdg-wrap {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .pdg-thumbs {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 10px 4px 8px;
+    margin: 6px -4px 0;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .pdg-thumbs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pdg-thumb {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+
+  .pdg-thumb.is-active {
+    border-color: #00666b;
+    box-shadow: 0 0 0 2px rgba(0, 102, 107, 0.25);
+    transform: none;
+  }
+
+  .pdg-dots {
+    display: none; /* چون تامنیل‌ها نمایش داده می‌شن */
+  }
+
+  .pdg-dots {
+    display: flex;
+  }
+
+  .pdg-nav {
+    display: flex;
+  }
+
+  .pdg-main {
+    border-radius: 20px;
+    cursor: default;
+  }
+
+  .pdg-main:hover {
+    transform: none !important;
+  }
+
+  .pdg-zoom-hint {
+    display: none;
+  }
+
+  .pdg-counter {
+    font-size: 0.68rem;
+    padding: 5px 12px;
+  }
+
+  .pdg-lb {
+    padding: 40px 12px;
+  }
+
+  .pdg-lb-close {
+    top: 12px;
+    right: 12px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .pdg-lb-nav {
+    width: 42px;
+    height: 42px;
+  }
+
+  .pdg-lb-nav.prev {
+    left: 8px;
+  }
+  .pdg-lb-nav.next {
+    right: 8px;
+  }
+
+  .pdg-lb-counter {
+    bottom: 16px;
+    font-size: 0.74rem;
+  }
+}
+
+/* ═══ Reduced Motion ═══ */
+
+@media (prefers-reduced-motion: reduce) {
+  .pdg-slide,
+  .pdg-thumb,
+  .pdg-lb-img {
+    transition: none !important;
+  }
+}
+/* ═══════════════════════════════════════════════
+   فشرده‌سازی موبایل
+   ═══════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  /* کادر قیمت */
+  .pd-price-block {
+    padding: 14px 16px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+  }
+
+  .pd-price-main {
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .pd-price-label {
+    font-size: 0.74rem;
+  }
+
+  .pd-price-value b {
+    font-size: 1.25rem;
+  }
+
+  .pd-price-value small {
+    font-size: 0.68rem;
+  }
+
+  .pd-tiers {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .pd-tier {
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  .pd-tier-qty {
+    font-size: 0.64rem;
+  }
+
+  .pd-tier-price {
+    font-size: 0.85rem;
+  }
+
+  /* کادر تعداد */
+  .pd-order-block {
+    padding: 14px 14px 16px;
+    border-radius: 16px;
+  }
+
+  .pd-qty-row {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .pd-qty-label {
+    font-size: 0.8rem;
+  }
+
+  .pd-stepper {
+    padding: 3px;
+  }
+
+  .pd-step {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+
+  .pd-qty-input {
+    width: 52px;
+    font-size: 0.95rem;
+  }
+
+  .pd-qty-hint {
+    font-size: 0.66rem;
+    flex-basis: 100%;
+    margin-inline-start: 0;
+    order: 3;
+    margin-top: 2px;
+  }
+
+  /* دکمه‌ها */
+  .pd-actions-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .pd-btn {
+    padding: 13px 16px;
+    font-size: 0.84rem;
+  }
+
+  .pd-hint {
+    font-size: 0.68rem;
+    margin-top: 10px;
+  }
+}
+@media (max-width: 640px) {
+  .breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    line-height: 1.6;
+    padding: 8px 0;
+    overflow: hidden;
+  }
+
+  .breadcrumb a,
+  .breadcrumb span {
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* آخرین آیتم (نام محصول) می‌تونه کوچیک‌تر باشه */
+  .breadcrumb span:last-child {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #1f4a5e;
+  }
+}
+/* ═══════════════════════════════════════════════════════
+   🔥 OVERRIDE MOBILE — گالری
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .pdg-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    gap: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    perspective: none !important;
+  }
+
+  .pdg-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    aspect-ratio: 1 !important;
+    border-radius: 18px !important;
+    transform: none !important;
+  }
+
+  .pdg-main img {
+    object-fit: cover !important;
+  }
+
+  .pdg-thumbs {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 10px 4px 8px !important;
+    margin: 6px 0 0 !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+
+  .pdg-thumbs::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .pdg-thumb {
+    width: 60px !important;
+    height: 60px !important;
+    min-width: 60px !important;
+    border-radius: 12px !important;
+    flex-shrink: 0 !important;
+    transform: none !important;
+  }
+
+  .pdg-thumb.is-active {
+    border-color: #00666b !important;
+    box-shadow: 0 0 0 2px rgba(0, 102, 107, 0.25) !important;
+    transform: none !important;
+  }
+
+  .pdg-dots {
+    display: none !important;
+  }
+
+  .pdg-nav {
+    display: flex !important;
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .pdg-nav svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .pdg-counter {
+    font-size: 0.62rem !important;
+    padding: 4px 10px !important;
+  }
+
+  .pdg-stock-badge {
+    font-size: 0.62rem !important;
+    padding: 4px 10px !important;
+  }
+}

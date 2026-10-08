@@ -1,0 +1,87 @@
+RewriteEngine On
+
+
+RewriteRule ^admin/product-form/?$ admin/product-form.php [L,QSA]
+
+RewriteRule ^admin/products/?$ admin/products.php [L,QSA]
+
+RewriteRule ^product/([a-zA-Z0-9\-]+)/?$ product.php?slug=$1 [L,QSA]
+
+
+# /products  →  products.php
+RewriteRule ^products/?$ products.php [L,QSA]
+
+# /product/{slug}  →  product.php?slug={slug}
+RewriteRule ^custom-order/?$ custom-order.php [L,QSA]
+
+
+
+RewriteRule ^about/?$ about.php [L,QSA]
+
+RewriteRule ^contact/?$ contact.php [L,QSA]
+
+# احراز هویت
+
+RewriteRule ^register/?$ register.php [L,QSA]
+
+# پنل مدیریت
+RewriteRule ^admin/?$ admin/index.php [L,QSA]
+RewriteRule ^admin/([a-z\-]+)/?$ admin/$1.php [L,QSA]
+
+RewriteRule ^admin/login/?$ admin/login.php [L,QSA]
+RewriteRule ^admin/logout/?$ admin/logout.php [L,QSA]
+
+RewriteRule ^api/login/?$  api/login.php  [L,QSA]
+RewriteRule ^api/logout/?$ api/logout.php [L,QSA]
+
+RewriteRule ^api/register/?$ api/register.php [L,QSA]
+
+RewriteRule ^api/cart/?$ api/cart.php [L,QSA]
+
+RewriteRule ^cart/?$ cart.php [L,QSA]
+
+RewriteRule ^checkout/?$ checkout.php [L,QSA]
+
+RewriteRule ^order-success/?$ order-success.php [L,QSA]
+
+RewriteRule ^admin/orders/?$ admin/orders.php [L,QSA]
+
+RewriteRule ^admin/order-detail/?$ admin/order-detail.php [L,QSA]
+
+RewriteRule ^payment/?$ payment.php [L,QSA]
+
+RewriteRule ^admin/payments/?$ admin/payments.php [L,QSA]
+
+RewriteRule ^invoice-print/?$ invoice-print.php [L,QSA]
+
+
+RewriteRule ^checkout-address/?$ checkout-address.php [L,QSA]
+
+RewriteRule ^checkout-shipping/?$ checkout-shipping.php [L,QSA]
+
+RewriteRule ^checkout-review/?$ checkout-review.php [L,QSA]
+
+RewriteRule ^payment/?$ payment.php [L,QSA]
+
+RewriteRule ^invoice-print/?$ invoice-print.php [L,QSA]
+
+RewriteRule ^invoice-pdf/?$ invoice-pdf.php [L,QSA]
+
+RewriteRule ^account-orders/?$ account-orders.php [L,QSA]
+
+RewriteRule ^refund-request/?$ refund-request.php [L,QSA]
+
+RewriteRule ^admin/report-ledger/?$ admin/report-ledger.php [L,QSA]
+
+RewriteRule ^admin/report-discounts/?$ admin/report-discounts.php [L,QSA]
+
+RewriteRule ^admin/report-shipping/?$ admin/report-shipping.php [L,QSA]
+
+RewriteRule ^admin/report-inventory/?$ admin/report-inventory.php [L,QSA]
+
+RewriteRule ^admin/price-update/?$ admin/price-update.php [L,QSA]
+
+RewriteRule ^admin/shipping-settings/?$ admin/shipping-settings.php [L,QSA]
+
+RewriteRule ^api/forgot-password/?$ api/forgot-password.php [L,QSA]
+

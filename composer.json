@@ -1,0 +1,9 @@
+{
+    "require": {
+        "php": ">=8.2",
+        "tecnickcom/tcpdf": "^6.10"
+    },
+    "require-dev": {
+        "icanhazstring/composer-unused": "^0.9.6"
+    }
+}
