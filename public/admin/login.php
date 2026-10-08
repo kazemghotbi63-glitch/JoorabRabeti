@@ -14,6 +14,8 @@ $error  = '';
 $mobile = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $mobile   = trim($_POST['mobile'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -239,6 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <form method="post">
+                <?= csrf_field() ?>
 
                 <div class="admin-login-field">
 

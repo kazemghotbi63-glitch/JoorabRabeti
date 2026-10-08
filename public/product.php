@@ -748,7 +748,8 @@ ob_start();
                         body: fd,
                         headers: {
                             'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
                         }
                     })
                     .then(function(r) {

@@ -156,6 +156,8 @@ function validateCartQty(
  * ============================================================ */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $do = $_POST['do'] ?? '';
     $itemId = (int)($_POST['item_id'] ?? 0);
@@ -951,6 +953,7 @@ ob_start();
                         method="post"
                         class="cart-remove-form"
                         onsubmit="return confirm('این قلم حذف شود؟');">
+                        <?= csrf_field() ?>
 
                         <input
                             type="hidden"
@@ -1167,7 +1170,8 @@ ob_start();
                     method: 'POST',
                     body: fd,
                     headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
                     }
                 })
                 .then(function(response) {

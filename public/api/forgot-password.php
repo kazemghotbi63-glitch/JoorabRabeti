@@ -24,6 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonOut(['ok' => false, 'error' => 'متد نامعتبر'], 405);
 }
 
+verify_csrf();
+
 $step = trim((string)($_POST['step'] ?? ''));
 
 /* ═══ مرحله ۱: ارسال کد ═══ */

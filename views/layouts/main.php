@@ -34,6 +34,7 @@ if (is_logged_in()) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
 
     <!-- ═══ SEO ═══ -->
     <title>
@@ -506,6 +507,7 @@ if (is_logged_in()) {
             <!-- ═══ نما: ورود ═══ -->
             <div class="auth-view active" id="view-login">
                 <form class="auth-pane active" id="pane-login" method="post">
+                    <?= csrf_field() ?>
                     <h3 class="auth-pane-title">ورود به حساب</h3>
 
                     <div class="form-error" id="loginError" style="display:none;"></div>
@@ -541,6 +543,7 @@ if (is_logged_in()) {
                 </div>
 
                 <form class="auth-pane active" id="pane-register" method="post" novalidate>
+                    <?= csrf_field() ?>
                     <h3 class="auth-pane-title">ثبت‌نام عمده‌فروشی</h3>
 
                     <div class="form-error" id="registerError" style="display:none;"></div>
@@ -612,6 +615,7 @@ if (is_logged_in()) {
 
                 <!-- دکمه ثبت — جدا از فرم اصلی، همیشه پایینِ دید -->
                 <form method="post" id="registerSubmitForm" novalidate>
+                    <?= csrf_field() ?>
                     <button type="submit" class="btn btn-primary co-submit" id="registerBtn">
                         ایجاد حساب
                     </button>

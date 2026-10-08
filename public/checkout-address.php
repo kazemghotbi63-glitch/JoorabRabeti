@@ -26,6 +26,8 @@ $error = '';
 
 /* ─── انتخاب آدرس ذخیره‌شده ─── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'pick') {
+    verify_csrf();
+
     $addressId = (int)($_POST['address_id'] ?? 0);
     $addr = AddressService::get($userId, $addressId);
     if ($addr) {
@@ -38,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'pick') {
 
 /* ─── افزودن آدرس جدید ─── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'add') {
+    verify_csrf();
+
     try {
         $addressId = AddressService::create($userId, [
             'label'         => $_POST['label'] ?? '',
@@ -98,6 +102,7 @@ ob_start();
                     <?php endif; ?>
                 </div>
                 <form method="post">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="do" value="pick">
                     <input type="hidden" name="address_id" value="<?= (int)$a['id'] ?>">
                     <button class="btn btn-primary">همین آدرس ←</button>
@@ -114,6 +119,7 @@ ob_start();
         <summary><?= $addresses ? '+ افزودن آدرس جدید' : 'ثبت آدرس ارسال' ?></summary>
 
         <form method="post" class="co-form">
+            <?= csrf_field() ?>
             <input type="hidden" name="do" value="add">
 
             <div class="form-row">

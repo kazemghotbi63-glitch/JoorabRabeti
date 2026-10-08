@@ -7,6 +7,8 @@ require_admin();
 
 /* حذف نرم — محصول هرگز از DB پاک نمی‌شود */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'deactivate') {
+    verify_csrf();
+
     $id = (int)($_POST['id'] ?? 0);
     if ($id > 0) {
         db()->prepare("UPDATE products SET is_active=0 WHERE id=?")->execute([$id]);
@@ -73,6 +75,7 @@ ob_start();
                             class="btn" style="padding:6px 14px;font-size:.72rem;background:var(--teal-100);color:var(--teal-800);">ویرایش</a>
                         <?php if ($p['is_active']): ?>
                             <form method="post" style="display:inline;" onsubmit="return confirm('این محصول از فروشگاه مخفی شود؟')">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="do" value="deactivate">
                                 <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
                                 <button class="btn" style="padding:6px 14px;font-size:.72rem;background:#fff0f0;color:#c62828;">حذف</button>

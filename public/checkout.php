@@ -16,6 +16,8 @@ $errors = [];
 
 /* ─── ثبت نهایی سفارش (POST) ─── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $shippingName    = trim($_POST['shipping_name'] ?? '');
     $shippingMobile  = trim($_POST['shipping_mobile'] ?? '');
@@ -211,6 +213,7 @@ ob_start();
 
         <!-- فرم ارسال -->
         <form method="post" class="form-card checkout-form">
+            <?= csrf_field() ?>
 
             <div class="form-row">
                 <div class="form-field">

@@ -1,12 +1,15 @@
 <?php
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
+require_once ROOT_PATH . '/config/auth.php';
 
 $errors = [];
 $saved  = false;
 
 /* ─────────── پردازش فرم (POST) ─────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     // مقادیر
     $name    = trim($_POST['name'] ?? '');
@@ -60,6 +63,7 @@ ob_start();
 
     <!-- ▂▂▂ فرم سفارش ▂▂▂ -->
     <form class="co-form" method="post" action="/custom-order" novalidate>
+        <?= csrf_field() ?>
 
         <?php if ($errors): ?>
             <div class="form-alert">

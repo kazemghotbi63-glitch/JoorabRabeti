@@ -18,6 +18,8 @@ $success = '';
    ═══════════════════════════════════════════════ */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $do = $_POST['do'] ?? '';
 
@@ -161,6 +163,7 @@ ob_start();
 
     <form method="post" enctype="multipart/form-data"
         style="display:grid;grid-template-columns:1fr 1fr 1fr 90px auto;gap:10px;align-items:end;">
+        <?= csrf_field() ?>
 
         <input type="hidden" name="do" value="add">
 
@@ -278,6 +281,7 @@ ob_start();
                             </button>
 
                             <form method="post" style="display:inline;">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="do" value="toggle">
                                 <input type="hidden" name="id" value="<?= (int)$post['id'] ?>">
                                 <button class="btn" style="padding:6px 12px;font-size:.72rem;">
@@ -287,6 +291,7 @@ ob_start();
 
                             <form method="post" style="display:inline;"
                                 onsubmit="return confirm('حذف شود؟');">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="do" value="delete">
                                 <input type="hidden" name="id" value="<?= (int)$post['id'] ?>">
                                 <button class="btn"
@@ -313,6 +318,7 @@ ob_start();
         <h3 style="margin:0 0 18px;">ویرایش پست</h3>
 
         <form method="post" enctype="multipart/form-data">
+            <?= csrf_field() ?>
             <input type="hidden" name="do" value="edit">
             <input type="hidden" name="id" id="edit_ig_id">
 

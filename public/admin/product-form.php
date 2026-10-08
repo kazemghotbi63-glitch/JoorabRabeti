@@ -105,6 +105,8 @@ if ($action === 'edit' && $productId > 0) {
 
 /* ═══════════════ حذف عکس ═══════════════ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'delete_image') {
+    verify_csrf();
+
 
     $imgId = (int)($_POST['image_id'] ?? 0);
 
@@ -142,6 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'delete_im
 
 /* ═══════════════ تعیین عکس اصلی ═══════════════ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'set_main') {
+    verify_csrf();
+
 
     $imgId = (int)($_POST['image_id'] ?? 0);
 
@@ -158,6 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'set_main'
 
 /* ═══════════════ آپلود فوری عکس (AJAX) ═══════════════ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'upload_image') {
+    verify_csrf();
+
 
     header('Content-Type: application/json; charset=utf-8');
 
@@ -258,6 +264,7 @@ if (
     ($_POST['do'] ?? '') !== 'set_main' &&
     ($_POST['do'] ?? '') !== 'upload_image'
 ) {
+    verify_csrf();
 
     $code        = strtoupper(trim($_POST['code'] ?? ''));
     $name        = trim($_POST['name'] ?? '');
@@ -459,10 +466,12 @@ ob_start();
 <!-- ═══════ فرم مخفی برای عملیات عکس (بیرون از فرم اصلی) ═══════ -->
 
 <form id="form_set_main" method="post" style="display:none;">
+    <?= csrf_field() ?>
     <input type="hidden" name="do" value="set_main">
 </form>
 
 <form id="form_delete_img" method="post" style="display:none;">
+    <?= csrf_field() ?>
     <input type="hidden" name="do" value="delete_image">
 </form>
 
@@ -470,6 +479,7 @@ ob_start();
 <!-- ═══════ فرم اصلی ═══════ -->
 
 <form id="mainProductForm" method="post" class="co-form" style="max-width:100%;" enctype="multipart/form-data">
+    <?= csrf_field() ?>
 
     <input type="hidden" name="do" value="save">
 
@@ -913,7 +923,8 @@ ob_start();
                     method: 'POST',
                     body: fd,
                     headers: {
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
                     }
                 })
                 .then(function(r) {

@@ -48,6 +48,8 @@ $statusLabels = [
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $id = filter_input(
         INPUT_POST,
@@ -577,6 +579,7 @@ ob_start();
                                 method="post"
                                 action="/admin/orders"
                                 style="display:flex;gap:6px;">
+                                <?= csrf_field() ?>
 
                                 <input
                                     type="hidden"
@@ -624,6 +627,7 @@ ob_start();
                                     action="/admin/orders"
                                     style="margin-top:6px;"
                                     onsubmit="return confirm('سفارش لغو شود؟ موجودی انبار برمی‌گردد.');">
+                                    <?= csrf_field() ?>
 
                                     <input
                                         type="hidden"

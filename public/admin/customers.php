@@ -9,6 +9,8 @@ $db = db();
 
 /* ─── عملیات: تأیید / رد / تعلیق شرکت ─── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
     $do = $_POST['do'] ?? '';
     $id = (int)($_POST['id'] ?? 0);
 
@@ -122,6 +124,7 @@ ob_start();
                             <?php if ($c['status'] === 'pending'): ?>
 
                                 <form method="post" style="display:inline;">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="do" value="approve">
                                     <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
                                     <button class="btn" style="padding:6px 14px;font-size:.72rem;background:#e8f5ee;color:#1a7f4b;font-weight:800;">
@@ -130,6 +133,7 @@ ob_start();
                                 </form>
 
                                 <form method="post" style="display:inline;" onsubmit="return confirm('این درخواست رد شود؟');">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="do" value="reject">
                                     <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
                                     <button class="btn" style="padding:6px 14px;font-size:.72rem;background:#fff0f0;color:#c62828;">
@@ -140,6 +144,7 @@ ob_start();
                             <?php elseif ($c['status'] === 'active'): ?>
 
                                 <form method="post" style="display:inline;" onsubmit="return confirm('این شرکت تعلیق شود؟');">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="do" value="suspend">
                                     <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
                                     <button class="btn" style="padding:6px 14px;font-size:.72rem;background:#fff4e0;color:#a06010;">
@@ -150,6 +155,7 @@ ob_start();
                             <?php else: ?>
 
                                 <form method="post" style="display:inline;">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="do" value="approve">
                                     <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
                                     <button class="btn" style="padding:6px 14px;font-size:.72rem;background:var(--teal-100);color:var(--teal-800);">
