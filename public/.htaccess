@@ -11,6 +11,9 @@ RewriteRule ^product/([a-zA-Z0-9\-]+)/?$ product.php?slug=$1 [L,QSA]
 # /products  →  products.php
 RewriteRule ^products/?$ products.php [L,QSA]
 
+# /sitemap.xml  →  sitemap.php (محصولات و دسته‌های فعال از دیتابیس)
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
 # /product/{slug}  →  product.php?slug={slug}
 RewriteRule ^custom-order/?$ custom-order.php [L,QSA]
 
