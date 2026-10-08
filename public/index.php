@@ -180,6 +180,28 @@ $newArrivals = db()->query("
 
 $pageTitle = 'رابطی — خرید عمده جوراب مستقیم از تولیدکننده';
 
+$jsonLd = [
+    [
+        '@context' => 'https://schema.org',
+        '@type'    => 'Organization',
+        'name'     => 'رابطی',
+        'url'      => SITE_URL . '/',
+        'logo'     => SITE_URL . '/Image/logo3.jpg',
+    ],
+    [
+        '@context'        => 'https://schema.org',
+        '@type'           => 'WebSite',
+        'name'            => 'رابطی',
+        'url'             => SITE_URL . '/',
+        'inLanguage'      => 'fa-IR',
+        'potentialAction' => [
+            '@type'       => 'SearchAction',
+            'target'      => SITE_URL . '/products?q={search_term_string}',
+            'query-input' => 'required name=search_term_string',
+        ],
+    ],
+];
+
 /* گالری اینستاگرام */
 $instagramPosts = [];
 try {

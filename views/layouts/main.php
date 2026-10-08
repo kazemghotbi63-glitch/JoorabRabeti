@@ -94,6 +94,11 @@ if (is_logged_in()) {
     <link rel="apple-touch-icon" href="/Image/logo3.jpg">
     <link rel="mask-icon" href="/Image/logo3.jpg" color="#004f53">
 
+    <?php /* داده ساختاریافته — صفحه‌ها آرایه‌ای از اسکیماها را در $jsonLd می‌گذارند */ ?>
+    <?php foreach ((array)($jsonLd ?? []) as $ld): ?>
+        <script type="application/ld+json"><?= json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+    <?php endforeach; ?>
+
     <link rel="stylesheet" href="/assets/css/app.css?v=49">
 </head>
 
