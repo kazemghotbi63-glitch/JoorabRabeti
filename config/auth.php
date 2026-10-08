@@ -1,12 +1,26 @@
 <?php
 // auth.php — نسخه نهایی v3
 
+/* HTTPS مستقیم یا پشت پروکسی/CDN (X-Forwarded-Proto) */
+function request_is_https(): bool
+{
+    $https = strtolower((string)($_SERVER['HTTPS'] ?? ''));
+    if ($https !== '' && $https !== 'off') {
+        return true;
+    }
+    if ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443) {
+        return true;
+    }
+    $proto = strtolower(trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
+    return $proto === 'https';
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',
         'domain'   => '',
-        'secure'   => false,       // لوکال http؛ روی HTTPS → true
+        'secure'   => request_is_https(),   // روی HTTPS فقط از طریق HTTPS ارسال شود
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
