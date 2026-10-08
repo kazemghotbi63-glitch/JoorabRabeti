@@ -25,6 +25,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $step = trim((string)($_POST['step'] ?? ''));
+$ip   = client_ip();
+
+function tooManyRequests(string $error, int $retryAfter): never
+{
+    header('Retry-After: ' . $retryAfter);
+    jsonOut(['ok' => false, 'error' => $error], 429);
+}
 
 /* ═══ مرحله ۱: ارسال کد ═══ */
 if ($step === 'request') {
@@ -62,6 +69,22 @@ if ($step === 'request') {
         $stmt = $db->prepare("SELECT id, full_name FROM users WHERE email = ? AND is_active = 1 LIMIT 1");
         $stmt->execute([$target]);
     }
+
+    /* Rate limit — قبل از جست‌وجوی کاربر تا وجود/عدم وجود حساب لو نرود */
+    $rlKey = $channel . ':' . $target;
+
+    if (rate_limit_exceeded('reset_req_target', $rlKey, 1, 60)) {
+        tooManyRequests('برای ارسال مجدد کد، یک دقیقه صبر کنید.', 60);
+    }
+    if (
+        rate_limit_exceeded('reset_req_target', $rlKey, 3, 900) ||
+        rate_limit_exceeded('reset_req_ip', $ip, 10, 3600)
+    ) {
+        tooManyRequests('درخواست‌های بازیابی بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.', 900);
+    }
+
+    rate_limit_hit('reset_req_target', $rlKey);
+    rate_limit_hit('reset_req_ip', $ip);
 
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -125,6 +148,18 @@ if ($step === 'reset') {
             '۸' => '8',
             '۹' => '9',
         ]);
+    } else {
+        $target = strtolower($target);
+    }
+
+    /* Rate limit — ۵ کد اشتباه برای هر مقصد / ۲۰ برای هر IP در ۱۵ دقیقه */
+    $rlKey = $channel . ':' . $target;
+
+    if (
+        rate_limit_exceeded('reset_verify_target', $rlKey, 5, 900) ||
+        rate_limit_exceeded('reset_verify_ip', $ip, 20, 900)
+    ) {
+        tooManyRequests('تلاش‌های ناموفق زیاد. ۱۵ دقیقه دیگر دوباره تلاش کنید.', 900);
     }
 
     $newPass  = (string)($_POST['new_password'] ?? '');
@@ -144,22 +179,30 @@ if ($step === 'reset') {
     }
     $stmt->execute([$target]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$user) jsonOut(['ok' => false, 'error' => 'کاربر یافت نشد.'], 404);
 
-    $userId = (int)$user['id'];
+    $reset = false;
 
-    $stmt = $db->prepare("
-        SELECT id FROM password_resets
-        WHERE user_id = ? AND channel = ? AND destination = ?
-          AND code = ? AND used_at IS NULL AND expires_at > NOW()
-        ORDER BY id DESC LIMIT 1
-    ");
-    $stmt->execute([$userId, $channel, $target, $code]);
-    $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($user) {
+        $userId = (int)$user['id'];
 
+        $stmt = $db->prepare("
+            SELECT id FROM password_resets
+            WHERE user_id = ? AND channel = ? AND destination = ?
+              AND code = ? AND used_at IS NULL AND expires_at > NOW()
+            ORDER BY id DESC LIMIT 1
+        ");
+        $stmt->execute([$userId, $channel, $target, $code]);
+        $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /* کاربر ناموجود و کد اشتباه پاسخ یکسان دارند */
     if (!$reset) {
+        rate_limit_hit('reset_verify_target', $rlKey);
+        rate_limit_hit('reset_verify_ip', $ip);
         jsonOut(['ok' => false, 'error' => 'کد نامعتبر یا منقضی شده است.'], 422);
     }
+
+    rate_limit_clear('reset_verify_target', $rlKey);
 
     $db->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
         ->execute([password_hash($newPass, PASSWORD_DEFAULT), $userId]);

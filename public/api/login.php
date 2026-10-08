@@ -36,10 +36,35 @@ if (
 }
 
 /* ============================================================
+   Rate limit — ۵ تلاش ناموفق برای هر موبایل / ۳۰ برای هر IP در ۱۵ دقیقه
+============================================================ */
+
+const LOGIN_WINDOW_SECONDS = 900;
+
+$ip = client_ip();
+
+if (
+    rate_limit_exceeded('login_mobile', $mobile, 5, LOGIN_WINDOW_SECONDS) ||
+    rate_limit_exceeded('login_ip', $ip, 30, LOGIN_WINDOW_SECONDS)
+) {
+    http_response_code(429);
+    header('Retry-After: ' . LOGIN_WINDOW_SECONDS);
+
+    echo json_encode([
+        'ok'    => false,
+        'error' => 'به دلیل تلاش‌های ناموفق زیاد، ورود موقتاً مسدود شد. ۱۵ دقیقه دیگر دوباره تلاش کنید.'
+    ], JSON_UNESCAPED_UNICODE);
+
+    exit;
+}
+
+/* ============================================================
    ورود ادمین
 ============================================================ */
 
 if (attempt_admin_login($mobile, $password)) {
+    rate_limit_clear('login_mobile', $mobile);
+
     echo json_encode([
         'ok'       => true,
         'role'     => 'admin',
@@ -75,6 +100,8 @@ if (
 ) {
     session_regenerate_id(true);
 
+    rate_limit_clear('login_mobile', $mobile);
+
     $_SESSION['customer_id'] = (int)$customer['id'];
 
     $_SESSION['customer_name'] =
@@ -98,6 +125,9 @@ if (
 /* ============================================================
    ناموفق
 ============================================================ */
+
+rate_limit_hit('login_mobile', $mobile);
+rate_limit_hit('login_ip', $ip);
 
 http_response_code(401);
 

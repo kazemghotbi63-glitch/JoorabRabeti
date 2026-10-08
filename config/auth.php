@@ -81,6 +81,66 @@ function verify_csrf(?string $token = null): void
 
 
 /* ═══════════════════════════════════════════════════════════════
+   محدودیت تعداد درخواست (Rate limit) — جدول rate_limits
+═══════════════════════════════════════════════════════════════ */
+
+function client_ip(): string
+{
+    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+}
+
+/**
+ * آیا تعداد رویدادهای ثبت‌شده برای این کلید در پنجره زمانی به سقف رسیده؟
+ *
+ * اگر جدول هنوز ساخته نشده باشد، درخواست مسدود نمی‌شود (fail-open).
+ */
+function rate_limit_exceeded(string $bucket, string $key, int $max, int $windowSeconds): bool
+{
+    try {
+        $stmt = db()->prepare("
+            SELECT COUNT(*)
+            FROM rate_limits
+            WHERE bucket = ?
+              AND rl_key = ?
+              AND created_at > NOW() - INTERVAL ? SECOND
+        ");
+        $stmt->execute([$bucket, hash('sha256', $key), $windowSeconds]);
+
+        return (int)$stmt->fetchColumn() >= $max;
+    } catch (Throwable $e) {
+        error_log('RATE_LIMIT CHECK FAILED: ' . $e->getMessage());
+        return false;
+    }
+}
+
+function rate_limit_hit(string $bucket, string $key): void
+{
+    try {
+        $pdo = db();
+        $pdo->prepare("INSERT INTO rate_limits (bucket, rl_key) VALUES (?, ?)")
+            ->execute([$bucket, hash('sha256', $key)]);
+
+        /* پاک‌سازی گاه‌به‌گاه رکوردهای قدیمی */
+        if (random_int(1, 100) === 1) {
+            $pdo->exec("DELETE FROM rate_limits WHERE created_at < NOW() - INTERVAL 1 DAY");
+        }
+    } catch (Throwable $e) {
+        error_log('RATE_LIMIT HIT FAILED: ' . $e->getMessage());
+    }
+}
+
+function rate_limit_clear(string $bucket, string $key): void
+{
+    try {
+        db()->prepare("DELETE FROM rate_limits WHERE bucket = ? AND rl_key = ?")
+            ->execute([$bucket, hash('sha256', $key)]);
+    } catch (Throwable $e) {
+        error_log('RATE_LIMIT CLEAR FAILED: ' . $e->getMessage());
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
    ورود ادمین
 ═══════════════════════════════════════════════════════════════ */
 
@@ -116,8 +176,12 @@ function attempt_admin_login(string $mobile, string $password): bool
     $stmt->execute([$mobile]);
     $user = $stmt->fetch();
 
-    $ok = $user
-        && !empty($user['password_hash'])
+    /* موبایل ادمین نیست (مثلاً ورود مشتری از /api/login) → تلاش ناموفق ادمین ثبت نشود */
+    if (!$user) {
+        return false;
+    }
+
+    $ok = !empty($user['password_hash'])
         && password_verify($password, $user['password_hash']);
 
     $pdo->prepare("
