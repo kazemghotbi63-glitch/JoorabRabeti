@@ -1,5 +1,5 @@
 <?php
-/* Auto-detect bootstrap (local + host) */
+/*  products.php Auto-detect bootstrap (local + host) */
 $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
@@ -225,7 +225,7 @@ ob_start();
 <?php endif; ?>
 
 <!-- ═══ سرچ پریمیوم ═══ -->
-<link rel="stylesheet" href="/assets/css/search-premium.css">
+<link rel="stylesheet" href="/assets/css/search-premium.css?v=1">
 <?php
 /* رفع N+1: یک کوئری برای شمارش همه چیپ‌ها */
 $chipCats = db()->query("
@@ -485,63 +485,6 @@ $chipCats = db()->query("
     <?php endif; ?>
 <?php endif; ?>
 
-<!-- ═══ استایل بج «در سبد» (اگر در CSS اصلی نبود) ═══ -->
-<style>
-    .prod-card .in-cart-badge {
-        display: none;
-    }
-
-    .prod-card.is-in-cart .in-cart-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        background: #00666b;
-        color: #fff;
-        padding: 3px 8px;
-        border-radius: 999px;
-        font-size: .7rem;
-        font-weight: 700;
-        z-index: 2;
-    }
-
-    .prod-card.is-in-cart .in-cart-badge svg {
-        width: 12px;
-        height: 12px;
-    }
-
-    .prod-card .prod-img {
-        position: relative;
-    }
-
-    .prod-price-now {
-        display: block;
-        font-size: 1.15rem;
-        font-weight: 900;
-        color: #004f53;
-        margin-bottom: 4px;
-    }
-
-    .prod-price-base {
-        display: block;
-        font-size: 0.7rem;
-        color: #8b7355;
-        margin-bottom: 6px;
-    }
-
-    .prod-price-badge {
-        font-size: 0.72rem;
-        color: #b8860b;
-        font-weight: 700;
-        background: #fdf8e9;
-        padding: 4px 8px;
-        border-radius: 6px;
-        display: inline-block;
-    }
-</style>
-
 <!-- ═══ اسکریپت سبد + استپر + قیمت داینامیک ═══ -->
 <script>
     (function() {
@@ -725,7 +668,13 @@ $chipCats = db()->query("
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
+                /* ⭐ مهمان → مودال ثبت‌نام */
+                if (window.RABETI_AUTH !== true) {
+                    if (typeof showToast === 'function') showToast('🔒 برای افزودن به سبد، ابتدا وارد شوید یا ثبت‌نام کنید');
+                    if (typeof openAuthModal === 'function') openAuthModal('register');
 
+                    return;
+                }
                 var card = btn.closest('[data-product-id]');
                 if (!card) return;
 
@@ -776,7 +725,10 @@ $chipCats = db()->query("
                     .then(function(data) {
                         btn.disabled = false;
                         btn.textContent = oldText;
-
+                        if (data && data.error === 'برای خرید ابتدا وارد شوید') {
+                            if (typeof openAuthModal === 'function') openAuthModal('register');
+                            return;
+                        }
                         if (!data || !data.ok) {
                             var msg = (data && data.error) ? data.error : 'خطا در افزودن به سبد';
                             if (typeof showToast === 'function') showToast('⚠️ ' + msg);

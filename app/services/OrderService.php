@@ -121,6 +121,37 @@ final class OrderService
        رزرو و آزادسازی موجودی
        ═══════════════════════════════════════════════════════════════ */
 
+    /** اگر تراکنش بیرونی باز است، به‌جای تراکنش جدید از SAVEPOINT استفاده می‌شود. */
+    private static function txBegin(PDO $db): bool
+    {
+        if ($db->inTransaction()) {
+            $db->exec('SAVEPOINT order_service_stock');
+            return false;
+        }
+        $db->beginTransaction();
+        return true;
+    }
+
+    private static function txCommit(PDO $db, bool $own): void
+    {
+        if ($own) {
+            $db->commit();
+        } else {
+            $db->exec('RELEASE SAVEPOINT order_service_stock');
+        }
+    }
+
+    private static function txRollback(PDO $db, bool $own): void
+    {
+        if ($own) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+        } elseif ($db->inTransaction()) {
+            $db->exec('ROLLBACK TO SAVEPOINT order_service_stock');
+        }
+    }
+
     /**
      * رزرو موجودی برای یک قلم سفارش.
      */
@@ -137,7 +168,7 @@ final class OrderService
         }
         if ($qty === 0) return true;
 
-        $db->beginTransaction();
+        $own = self::txBegin($db);
         try {
             $stmt = $db->prepare("
                 SELECT qty_physical, reserved, unsellable
@@ -149,7 +180,7 @@ final class OrderService
             $row = $stmt->fetch();
 
             if (!$row) {
-                $db->rollBack();
+                self::txRollback($db, $own);
                 throw new RuntimeException("رکورد inventory برای محصول {$productId} وجود ندارد");
             }
 
@@ -159,7 +190,7 @@ final class OrderService
 
             $availForSale = max(0, $phys - $res - $uns);
             if ($availForSale < $qty) {
-                $db->rollBack();
+                self::txRollback($db, $own);
                 throw new RuntimeException(
                     "موجودی قابل فروش محصول {$productId} کافی نیست (موجود={$availForSale}, درخواست={$qty})"
                 );
@@ -177,16 +208,17 @@ final class OrderService
                 $productId,
                 $qty,
                 $orderId,
+                $orderId,
                 $orderItemId,
                 null,
                 $adminId,
                 $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
             ]);
 
-            $db->commit();
+            self::txCommit($db, $own);
             return true;
         } catch (Throwable $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            self::txRollback($db, $own);
             throw $e;
         }
     }
@@ -204,7 +236,7 @@ final class OrderService
     ): bool {
         if ($qty <= 0) return true;
 
-        $db->beginTransaction();
+        $own = self::txBegin($db);
         try {
             $stmt = $db->prepare("
                 SELECT reserved FROM inventory WHERE product_id = ? FOR UPDATE
@@ -212,7 +244,7 @@ final class OrderService
             $stmt->execute([$productId]);
             $row = $stmt->fetch();
             if (!$row) {
-                $db->rollBack();
+                self::txRollback($db, $own);
                 return false;
             }
             $current    = (int)$row['reserved'];
@@ -230,16 +262,17 @@ final class OrderService
                 $productId,
                 $releaseQty,
                 $orderId,
+                $orderId,
                 $orderItemId,
                 null,
                 $adminId,
                 $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
             ]);
 
-            $db->commit();
+            self::txCommit($db, $own);
             return true;
         } catch (Throwable $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            self::txRollback($db, $own);
             throw $e;
         }
     }
@@ -257,7 +290,7 @@ final class OrderService
     ): bool {
         if ($qty <= 0) return true;
 
-        $db->beginTransaction();
+        $own = self::txBegin($db);
         try {
             $stmt = $db->prepare("
                 SELECT qty_physical, reserved FROM inventory WHERE product_id = ? FOR UPDATE
@@ -265,7 +298,7 @@ final class OrderService
             $stmt->execute([$productId]);
             $row = $stmt->fetch();
             if (!$row) {
-                $db->rollBack();
+                self::txRollback($db, $own);
                 throw new RuntimeException("inventory برای محصول {$productId} یافت نشد");
             }
 
@@ -273,13 +306,13 @@ final class OrderService
             $res  = (int)$row['reserved'];
 
             if ($res < $qty) {
-                $db->rollBack();
+                self::txRollback($db, $own);
                 throw new RuntimeException(
                     "مقدار رزرو ({$res}) کمتر از مقدار درخواست ارسال ({$qty}) است"
                 );
             }
             if ($phys < $qty) {
-                $db->rollBack();
+                self::txRollback($db, $own);
                 throw new RuntimeException("موجودی فیزیکی کافی نیست");
             }
 
@@ -298,16 +331,17 @@ final class OrderService
                 $productId,
                 $qty,
                 $orderId,
+                $orderId,
                 $orderItemId,
                 null,
                 $adminId,
                 $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
             ]);
 
-            $db->commit();
+            self::txCommit($db, $own);
             return true;
         } catch (Throwable $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            self::txRollback($db, $own);
             throw $e;
         }
     }
@@ -324,7 +358,7 @@ final class OrderService
     ): bool {
         if ($qty <= 0) return false;
 
-        $db->beginTransaction();
+        $own = self::txBegin($db);
         try {
             $db->prepare("
                 INSERT INTO inventory (product_id, qty_physical, reserved, unsellable)
@@ -345,10 +379,10 @@ final class OrderService
                 $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
             ]);
 
-            $db->commit();
+            self::txCommit($db, $own);
             return true;
         } catch (Throwable $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            self::txRollback($db, $own);
             throw $e;
         }
     }
@@ -370,7 +404,7 @@ final class OrderService
             throw new InvalidArgumentException("دلیل اصلاح موجودی الزامی است");
         }
 
-        $db->beginTransaction();
+        $own = self::txBegin($db);
         try {
             $stmt = $db->prepare("SELECT qty_physical FROM inventory WHERE product_id = ? FOR UPDATE");
             $stmt->execute([$productId]);
@@ -379,7 +413,7 @@ final class OrderService
             $delta = $newPhysical - $oldPhysical;
 
             if ($delta === 0) {
-                $db->rollBack();
+                self::txRollback($db, $own);
                 return true;
             }
 
@@ -404,10 +438,10 @@ final class OrderService
                 $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
             ]);
 
-            $db->commit();
+            self::txCommit($db, $own);
             return true;
         } catch (Throwable $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            self::txRollback($db, $own);
             throw $e;
         }
     }

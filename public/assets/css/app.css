@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   /* ═══════════════════════════════════════════════════════
      پالت اصلی — قهوه‌ای/طلایی/کرم (مطابق لوگو)
      ═══════════════════════════════════════════════════════ */
@@ -333,7 +333,7 @@ img {
 .header-action-btn .badge,
 .badge {
   position: absolute;
-  top: -5px;
+  top: 0px;
   right: -5px;
   min-width: 18px;
   height: 18px;
@@ -408,7 +408,7 @@ img {
 .drawer-nav {
   display: flex;
   flex-direction: column;
-  padding: 11px 0;
+  padding: 6px 0;
   gap: 2px;
 }
 
@@ -649,8 +649,8 @@ img {
 .breadcrumb {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 20px 0;
+  gap: 3px;
+  padding: 15px 0;
   color: #7a6244; /* rabeti-fixes: کنتراست ۵.۳۳ روی کرم */
   font-size: 12px;
 }
@@ -1081,169 +1081,6 @@ img {
   }
 }
 
-@media (max-width: 1080px) {
-  .prod-grid,
-  .r-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 980px) {
-  .header-inner {
-    height: 45px;
-  }
-
-  .container {
-    padding-inline: 20px;
-  }
-
-  .r6-footer-top {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 760px) {
-  .section {
-    padding: 45px 0;
-  }
-
-  .section-title {
-    font-size: 23px;
-  }
-
-  .prod-grid,
-  .r-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .r6-newwrap {
-    padding: 40px 0;
-  }
-
-  .r6-newwrap .head {
-    align-items: flex-start;
-  }
-
-  .r6-footer-cols {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .header-inner {
-    height: 45px;
-    padding: 0 16px;
-  }
-
-  .container {
-    padding-inline: 13px;
-  }
-
-  .header-left {
-    gap: 6px;
-  }
-
-  .header-action-btn,
-  .hamburger {
-    width: 38px;
-    height: 38px;
-  }
-
-  .r6-logo {
-    font-size: 21px;
-  }
-
-  .r6-logo-en {
-    font-size: 8px;
-  }
-
-  .bottom-nav {
-    position: fixed;
-    display: flex;
-    align-items: stretch;
-    justify-content: space-around;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 64px;
-    padding-bottom: env(safe-area-inset-bottom);
-    background: rgba(255, 255, 255, 0.97);
-    border-top: 1px solid var(--r6-line);
-    z-index: 1400;
-    box-shadow: 0 -6px 25px rgba(0, 0, 0, 0.06);
-  }
-
-  .bn-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    color: var(--r6-mut);
-    font-size: 9px;
-  }
-
-  .bn-item svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .bn-item.active {
-    color: var(--r6-brand);
-    font-weight: 800;
-  }
-
-  .bn-item.active::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    width: 25px;
-    height: 2px;
-    background: var(--r6-brand);
-    border-radius: 0 0 3px 3px;
-  }
-
-  .body.app-body {
-    padding-bottom: 0;
-  }
-
-  .app-body {
-    padding-bottom: 74px !important;
-  }
-
-  .r6-drawer {
-    width: min(280px, 90vw);
-  }
-
-  .home-hero {
-    min-height: min(540px, calc(100svh - 130px));
-  }
-
-  .auth-modal {
-    padding: 20px;
-  }
-
-  .auth-modal-overlay {
-    padding: 10px;
-  }
-}
-
-@media (max-width: 430px) {
-  .prod-grid,
-  .r-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .pd-title {
-    font-size: 25px;
-  }
-
-  .hero-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -1385,18 +1222,6 @@ body.app-body {
   height: 100%;
   display: block;
 }
-
-/* .r6-hero-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  display: block;
-  background: var(--r6-cream);
-}
- */
 
 .r6-hero-img {
   width: 100%;
@@ -1593,40 +1418,11 @@ body.app-body {
 
 /* موبایل */
 
-@media (max-width: 760px) {
-  .r6-hero {
-    min-height: 220px;
-  }
-
-  .r6-hero-content h1 {
-    font-size: clamp(1.7rem, 8vw, 2.2rem);
-  }
-
-  .r6-hero-cta .r-btn {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .r-sec-head h2 {
-    font-size: 1.05rem;
-  }
-}
-
 /* =========================================================
    MOBILE DRAWER FOOTER
    ========================================================= */
 
 /* دکمه ورود / ثبت‌نام */
-
-/* موبایل */
-
-@media (max-width: 760px) {
-}
-
-/* موبایل‌های خیلی کوچک */
-
-@media (max-width: 430px) {
-}
 
 /* =========================================================
    R6 HERO / ROTATING BANNER
@@ -1894,140 +1690,10 @@ body.app-body {
 }
 
 /* ============================================================
-   MOBILE
-============================================================ */
-
-@media (max-width: 760px) {
-  .r6-hero {
-    /*
-     * تقریباً یک‌سوم ارتفاع موبایل
-     */
-    height: clamp(220px, 30svh, 280px);
-  }
-
-  .r6-hero-content {
-    padding: 18px 15px 22px;
-  }
-
-  .r6-hero-content h1 {
-    font-size: clamp(1.45rem, 7vw, 2rem);
-    margin-bottom: 6px;
-  }
-
-  .r6-hero-content p {
-    font-size: 0.78rem;
-    line-height: 1.8;
-
-    margin-bottom: 12px;
-
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .r6-hero-cta {
-    gap: 7px;
-  }
-
-  .r6-hero-cta .r-btn {
-    min-width: 0;
-    flex: 1;
-
-    padding: 9px 10px;
-
-    font-size: 12px;
-  }
-
-  .r6-hero-prev,
-  .r6-hero-next {
-    width: 34px;
-    height: 34px;
-
-    font-size: 23px;
-  }
-
-  .r6-hero-prev {
-    right: 9px;
-  }
-
-  .r6-hero-next {
-    left: 9px;
-  }
-
-  .r6-hero-dots {
-    bottom: 8px;
-  }
-}
-
-/* ============================================================
    SMALL MOBILE
 ============================================================ */
 
-@media (max-width: 430px) {
-  .r6-hero {
-    height: clamp(200px, 30svh, 260px);
-  }
-
-  .r6-hero-content {
-    padding: 14px 12px 18px;
-  }
-
-  .r6-hero-content h1 {
-    font-size: 1.35rem;
-  }
-
-  .r6-hero-content p {
-    font-size: 0.73rem;
-  }
-
-  .r6-hero-cta .r-btn {
-    font-size: 11px;
-  }
-
-  .r6-hero-prev,
-  .r6-hero-next {
-    width: 30px;
-    height: 30px;
-
-    font-size: 20px;
-  }
-}
-
 /* ── مودال ورود در موبایل: وسط صفحه واقعی ── */
-
-@media (max-width: 760px) {
-  .auth-modal-overlay {
-    align-items: flex-start; /* از بالا شروع */
-    padding: 0;
-  }
-
-  .auth-modal {
-    max-width: 100%;
-    min-height: 100dvh; /* تمام صفحه */
-    max-height: 100dvh;
-    border-radius: 0;
-    padding: 24px 20px 40px;
-    /* محتوا را در وسط عمودی قرار بده */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .auth-modal-close {
-    position: fixed; /* همیشه در دسترس */
-    top: 12px;
-    left: 12px;
-    z-index: 10;
-  }
-
-  /* دکمه بستن روی پس‌زمینه محو بهتر دیده شود */
-
-  .auth-modal-overlay::before {
-    content: "×";
-    display: none;
-  }
-}
 
 /* ═══ سبد خرید ═══ */
 
@@ -2187,25 +1853,6 @@ body.app-body {
   color: var(--brand);
 }
 
-@media (max-width: 640px) {
-  .cart-item {
-    grid-template-columns: 76px 1fr;
-  }
-
-  .cart-item-side {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    border-top: 1px dashed var(--line);
-    padding-top: 10px;
-  }
-
-  .cart-item-side .stepper {
-    width: 100px;
-  }
-}
-
 /* ═══ Checkout ═══ */
 
 .checkout-grid {
@@ -2242,6 +1889,7 @@ body.app-body {
   font-size: 0.8rem;
   padding: 6px 0;
   color: var(--text-2);
+  align-items: center;
 }
 
 .cs-row b {
@@ -2284,6 +1932,61 @@ body.app-body {
   border-radius: 8px;
   padding: 6px 10px;
   margin-top: 6px;
+}
+
+.cs-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.cs-thumb-empty {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.cs-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cs-row-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cs-row-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* در موبایل کوچک‌تر */
+@media (max-width: 640px) {
+  .cs-thumb,
+  .cs-thumb-empty {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+  }
+  .cs-row-main {
+    gap: 8px;
+  }
 }
 
 /* ═══ بدنه کارت کاتالوگ — قیمت/موجودی/Stepper/دکمه ═══ */
@@ -2447,76 +2150,6 @@ body.app-body {
   transform: scale(0.97);
 }
 
-/* ───────── موبایل بزرگ (≤ 760px) ───────── */
-
-@media (max-width: 760px) {
-  .prod-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .prod-info {
-    padding: 10px 11px 12px;
-  }
-
-  .prod-name {
-    min-height: 42px;
-    height: 42px;
-  }
-
-  .prod-name a {
-    line-height: 21px;
-  }
-
-  .prod-name {
-    font-size: 0.76rem;
-  }
-
-  .prod-price {
-    font-size: 0.86rem;
-  }
-
-  .prod-card .quick-add,
-  .prod-card .r6-add {
-    min-height: 38px;
-    font-size: 0.74rem;
-  }
-}
-
-/* ───────── موبایل کوچک (≤ 480px) ───────── */
-
-@media (max-width: 480px) {
-  .prod-info {
-    padding: 9px 10px 11px;
-    gap: 3px;
-  }
-
-  .prod-cat,
-  .prod-code {
-    font-size: 0.6rem;
-  }
-
-  .prod-name {
-    font-size: 0.72rem;
-    min-height: 38px;
-    height: 38px;
-  }
-
-  .prod-name a {
-    line-height: 19px;
-  }
-
-  .prod-price {
-    font-size: 0.8rem;
-  }
-
-  .prod-card .quick-add,
-  .prod-card .r6-add {
-    min-height: 36px;
-    font-size: 0.7rem;
-  }
-}
-
 /* ── ورود دستی تعداد ── */
 
 .step-input {
@@ -2560,167 +2193,6 @@ body.app-body {
   position: sticky;
   top: 0;
   z-index: 101;
-}
-
-/* ═══ سبد خرید — نسخه مهندسی‌شده موبایل ═══ */
-
-@media (max-width: 760px) {
-  /* ردیف کارت: عکس کوچک + اطلاعات جمع‌وجور */
-
-  .cart-item {
-    display: grid !important;
-    grid-template-columns: 72px 1fr !important;
-    gap: 12px !important;
-    padding: 12px !important;
-    border-radius: 14px !important;
-    background: #fff !important;
-    border: 1px solid var(--line, #e6dcc9) !important;
-    box-shadow: 0 1px 4px rgba(74, 44, 26, 0.05);
-    margin-bottom: 10px !important;
-  }
-
-  .cart-item-img {
-    width: 72px !important;
-    height: 72px !important;
-    aspect-ratio: 1 !important;
-    border-radius: 10px !important;
-    overflow: hidden;
-  }
-
-  .cart-item-img img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  /* عنوان و مشخصات فشرده */
-
-  .cart-item-info h3 {
-    font-size: 0.82rem !important;
-    margin: 0 0 2px !important;
-  }
-
-  .cart-item-info .card-attr {
-    font-size: 0.64rem !important;
-  }
-
-  .cart-item-price {
-    margin: 4px 0 !important;
-  }
-
-  .cart-item-price b {
-    font-size: 0.84rem !important;
-  }
-
-  .cart-item-price small {
-    font-size: 0.6rem !important;
-  }
-
-  .cart-item-warn {
-    font-size: 0.64rem !important;
-    padding: 4px 8px !important;
-  }
-
-  /* ردیف پایینی: تعداد و جمع و حذف در یک خط مرتب */
-
-  .cart-item-side {
-    grid-column: 1 / -1 !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 10px !important;
-    border-top: 1px dashed var(--line, #e6dcc9) !important;
-    padding-top: 10px !important;
-    margin: 0 !important;
-  }
-
-  .cart-item-side .stepper {
-    display: flex !important;
-    align-items: center;
-    border: 1px solid var(--line, #e6dcc9) !important;
-    border-radius: 20px !important;
-    padding: 2px !important;
-    width: auto !important;
-  }
-
-  .cart-item-side .step {
-    width: 28px !important;
-    height: 28px !important;
-    border: none !important;
-    border-radius: 50% !important;
-    font-size: 0.95rem !important;
-  }
-
-  .cart-item-side .step-num,
-  .cart-item-side .step-input {
-    width: 34px !important;
-    height: 28px !important;
-    font-size: 0.85rem !important;
-  }
-
-  .cart-line-total {
-    text-align: left !important;
-  }
-
-  .cart-line-total small {
-    font-size: 0.58rem !important;
-  }
-
-  .cart-line-total b {
-    font-size: 0.82rem !important;
-  }
-
-  .cart-remove {
-    font-size: 0.68rem !important;
-    padding: 4px 8px;
-  }
-
-  /* خلاصه پایین — چسبیده و اپ‌مانند */
-
-  .cart-summary {
-    position: sticky !important;
-    bottom: 0 !important;
-    z-index: 50;
-    margin: 12px -16px 0 !important;
-    border-radius: 18px 18px 0 0 !important;
-    box-shadow: 0 -8px 28px rgba(74, 44, 26, 0.12);
-    padding: 16px 18px calc(14px + env(safe-area-inset-bottom)) !important;
-  }
-
-  .cart-checkout-btn {
-    min-height: 48px !important;
-    font-size: 0.92rem !important;
-  }
-}
-
-/* ═══ چیپ‌های دسته — گرید بزرگ: ۴ دسکتاپ / ۳ موبایل ═══ */
-
-/* عکس دسته — دو برابر قبل */
-
-/* فعال */
-
-/* ═══ موبایل: ۳ ستون ═══ */
-
-@media (max-width: 760px) {
-}
-
-/* فاصله از طرفین در موبایل — گرید تا لبه‌ها با padding همنفس */
-
-@media (max-width: 760px) {
-}
-
-/* ═══ چیپ دسته — عکس پرکننده کل ناحیه بالایی ═══ */
-
-/* ناحیه عکس — همه فضا به‌جز نوار اسم */
-
-/* fallback (ایموجی) — همان ناحیه */
-
-/* نوار اسم — پایین چیپ */
-
-/* حالت فعال */
-
-@media (max-width: 760px) {
 }
 
 /* ═══ بلوک مشخصات تک‌محصول ═══ */
@@ -2775,9 +2247,6 @@ body.app-body {
 /* حذف بقایای کامپوننت V5 از کارت‌های جدید */
 
 /* ═══ پرداخت ═══ */
-
-@media (max-width: 640px) {
-}
 
 .pay-method input {
   display: none;
@@ -2901,12 +2370,13 @@ html {
 
 body {
   margin: 0;
-  padding: 20px;
+  padding: 5px;
   color: var(--ink);
   background: #f2f3f5;
   font-family: Tahoma, Arial, sans-serif;
   font-size: 13px;
   line-height: 1.7;
+  /* user-select: none; */
 }
 
 button,
@@ -3016,49 +2486,6 @@ a {
 
 /* Mobile */
 
-@media (max-width: 650px) {
-  body {
-    padding: 8px;
-    background: #f2f3f5;
-    font-size: 12px;
-  }
-
-  .invoice-page {
-    border-radius: 11px;
-  }
-
-  .brand-subtitle {
-    font-size: 9px;
-  }
-
-  .invoice-meta {
-    min-width: 0;
-    text-align: left;
-  }
-
-  .status {
-    font-size: 9px;
-    padding: 2px 6px;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 7px;
-    margin: 11px 0;
-  }
-
-  .totals {
-    background: var(--soft);
-    border-radius: 9px;
-    padding: 9px 11px;
-  }
-
-  .invoice-footer {
-    flex-direction: column;
-    gap: 3px;
-  }
-}
-
 /* Print */
 
 @media print {
@@ -3127,25 +2554,6 @@ a {
   margin-bottom: 20px;
 }
 
-@media (max-width: 760px) {
-  .invoice-page {
-    margin: 15px auto 35px;
-  }
-
-  .invoice-meta {
-    text-align: right;
-  }
-
-  .invoice-actions {
-    flex-direction: column;
-  }
-
-  .invoice-actions button,
-  .invoice-actions a {
-    width: 100%;
-  }
-}
-
 @media print {
   body {
     background: #fff !important;
@@ -3160,14 +2568,6 @@ a {
     margin: 0;
     max-width: none;
   }
-}
-
-/* ===== Fix نمایش اقلام فاکتور ===== */
-
-@media screen {
-}
-
-@media screen and (max-width: 760px) {
 }
 
 /* ============================================================
@@ -3689,82 +3089,6 @@ a {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 10px;
-}
-
-/* ============================================================
-   MOBILE
-   ============================================================ */
-
-@media (max-width: 760px) {
-  .payment-page {
-    padding: 12px 12px 50px;
-  }
-
-  .payment-head {
-    flex-direction: column;
-    margin-top: 12px;
-  }
-
-  .payment-head h1 {
-    font-size: 24px;
-  }
-
-  .payment-invoice-number {
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .payment-method-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .payment-proof-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .payment-section {
-    padding: 17px;
-    border-radius: 15px;
-  }
-
-  .payment-summary {
-    padding: 5px 14px;
-    border-radius: 15px;
-  }
-
-  .payment-summary-row {
-    gap: 10px;
-  }
-
-  .payment-summary-row strong {
-    text-align: left;
-  }
-
-  .payment-result {
-    padding: 16px;
-  }
-
-  .bank-value-row {
-    align-items: stretch;
-  }
-
-  .bank-value-row code {
-    font-size: 13px;
-  }
-
-  .payment-submit {
-    width: 100%;
-  }
-
-  .payment-actions {
-    flex-direction: column;
-  }
-
-  .payment-actions .btn {
-    width: 100%;
-    text-align: center;
-    box-sizing: border-box;
-  }
 }
 
 /* ============================================================
@@ -4588,213 +3912,6 @@ a {
 }
 
 /* ============================================================
-   MOBILE
-   ============================================================ */
-
-@media (max-width: 820px) {
-  body.invoice-page {
-    padding: 12px;
-  }
-
-  .invoice-header {
-    padding: 22px 18px 18px;
-  }
-
-  .invoice-content {
-    padding: 22px 18px 24px;
-  }
-
-  .invoice-footer {
-    padding: 14px 18px;
-  }
-
-  .invoice-bottom {
-    grid-template-columns: 1fr;
-  }
-
-  .totals-box {
-    width: 100%;
-  }
-}
-
-@media (max-width: 700px) {
-  body.invoice-page {
-    padding: 0;
-    background: #fff;
-  }
-
-  .invoice-actions {
-    margin: 0;
-    padding: 10px;
-
-    background: #faf6ee;
-
-    flex-wrap: wrap;
-  }
-
-  .actions-right,
-  .actions-left {
-    flex: 1 1 auto;
-  }
-
-  .actions-right {
-    justify-content: flex-start;
-  }
-
-  .actions-left {
-    justify-content: flex-end;
-  }
-
-  .action-btn {
-    min-height: 40px;
-    padding: 0 11px;
-
-    font-size: 11px;
-  }
-
-  .invoice-sheet {
-    width: 100%;
-
-    border: 0;
-    border-radius: 0;
-
-    box-shadow: none;
-  }
-
-  .invoice-header-top {
-    align-items: flex-start;
-  }
-
-  .brand-logo {
-    width: 54px;
-    height: 54px;
-  }
-
-  .brand-name {
-    font-size: 20px;
-  }
-
-  .brand-subtitle {
-    font-size: 9px;
-  }
-
-  .invoice-title-label {
-    font-size: 10px;
-  }
-
-  .invoice-title-number {
-    font-size: 15px;
-  }
-
-  .invoice-meta {
-    grid-template-columns: 1fr;
-    gap: 7px;
-
-    margin-top: 17px;
-  }
-
-  .meta-card {
-    padding: 9px 11px;
-  }
-
-  .parties {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .payment-item-main {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 7px;
-  }
-
-  .payment-item-amount {
-    font-size: 13px;
-  }
-
-  .payment-item-meta {
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .invoice-bottom {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  .totals-box {
-    padding: 15px;
-  }
-
-  .invoice-footer {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 430px) {
-  .invoice-actions {
-    gap: 6px;
-  }
-
-  .actions-right,
-  .actions-left {
-    width: 100%;
-  }
-
-  .actions-right {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .actions-left {
-    justify-content: stretch;
-  }
-
-  .actions-left .action-btn {
-    width: 100%;
-  }
-
-  .action-btn {
-    width: 100%;
-  }
-
-  .invoice-header {
-    padding: 18px 14px 15px;
-  }
-
-  .invoice-content {
-    padding: 18px 14px 20px;
-  }
-
-  .invoice-header-top {
-    gap: 10px;
-  }
-
-  .brand-block {
-    gap: 9px;
-  }
-
-  .brand-logo {
-    width: 48px;
-    height: 48px;
-  }
-
-  .brand-name {
-    font-size: 18px;
-  }
-
-  .invoice-title-number {
-    font-size: 13px;
-  }
-
-  .party-row {
-    grid-template-columns: 72px minmax(0, 1fr);
-    padding: 8px 12px;
-  }
-}
-
-/* ============================================================
    PRINT
    ============================================================ */
 
@@ -4880,87 +3997,6 @@ a {
     display: none !important;
   }
 }
-
-/* ============================================================
-   RABETI — FINANCIAL CENTER
-   Admin Financial / Payment Reconciliation
-   ============================================================ */
-
-/* ============================================================
-   ALERT
-   ============================================================ */
-
-/* ============================================================
-   SUMMARY
-   ============================================================ */
-
-/* ============================================================
-   FILTERS
-   ============================================================ */
-
-/* ============================================================
-   INVOICE LIST
-   ============================================================ */
-
-/* ============================================================
-   BADGES
-   ============================================================ */
-
-/* ============================================================
-   BUTTONS
-   ============================================================ */
-
-/* ============================================================
-   DETAILS
-   ============================================================ */
-
-/* ============================================================
-   SECTIONS
-   ============================================================ */
-
-/* ============================================================
-   PAYMENT HISTORY
-   ============================================================ */
-
-/* ============================================================
-   AUDIT HISTORY
-   ============================================================ */
-
-/* ============================================================
-   CREDITOR
-   ============================================================ */
-
-/* ============================================================
-   SETTLEMENT HISTORY
-   ============================================================ */
-
-/* ============================================================
-   EMPTY
-   ============================================================ */
-
-/* ============================================================
-   MODAL
-   ============================================================ */
-
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
-
-@media (max-width: 1250px) {
-}
-
-@media (max-width: 900px) {
-}
-
-@media (max-width: 600px) {
-}
-
-@media (max-width: 380px) {
-}
-
-/* ═══════════════════════════════════════════════════════════
-   AUTH MODAL — نسخه یکپارچه نهایی (تنها منبع استایل مودال)
-   ═══════════════════════════════════════════════════════════ */
 
 /* ─── چیدمان کلی مودال ─── */
 
@@ -5107,63 +4143,6 @@ a {
 .form-field label i {
   color: #b91c1c;
   font-style: normal;
-}
-
-/* ─── موبایل: تمام‌صفحه، دکمه ثابت ─── */
-
-@media (max-width: 760px) {
-  .auth-modal-overlay {
-    padding: 0 !important;
-    align-items: stretch !important;
-  }
-
-  .auth-modal {
-    width: 100% !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    border-radius: 0 !important;
-    padding-bottom: env(safe-area-inset-bottom) !important;
-  }
-
-  .auth-view .auth-pane {
-    padding: 14px 16px 18px !important;
-  }
-
-  .auth-view .form-field {
-    margin-bottom: 10px !important;
-  }
-
-  .auth-view .form-field input {
-    height: 42px !important;
-    padding: 0 10px !important;
-  }
-
-  .auth-view .auth-pane-title {
-    margin-bottom: 10px !important;
-    font-size: 17px !important;
-  }
-
-  .auth-view .auth-pane-note {
-    margin-bottom: 10px !important;
-  }
-
-  /* دکمه ثبت/ورود — sticky پایین */
-
-  .auth-view .co-submit {
-    position: sticky !important;
-    bottom: 12px !important;
-    width: calc(100% - 4px) !important;
-    min-height: 50px !important;
-    font-size: 0.95rem !important;
-    box-shadow: 0 -6px 20px rgba(74, 44, 26, 0.15);
-    z-index: 5;
-  }
-
-  .auth-modal-close {
-    position: fixed !important;
-    top: calc(10px + env(safe-area-inset-top)) !important;
-    left: 12px !important;
-  }
 }
 
 /* ─── دسکتاپ: دکمه sticky در فرم بلند ─── */
@@ -5391,53 +4370,6 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-@media (max-width: 760px) {
-  .header-account-name,
-  .header-account-logout,
-  .header-account-btn {
-    display: none;
-  }
-
-  .header-account .auth-trigger {
-    min-height: 36px;
-    padding: 0 11px;
-    font-size: 10px;
-  }
-}
-
-/* ⭐ کانتینر — عمودی، گوشهٔ پایین چپ */
-
-/* ⭐ دکمه‌های پیام‌رسان */
-
-/* ⭐ رنگ برند */
-
-/* ⭐ تولتیپ — سمت راست دکمه (چون چپ چیده شده) */
-
-@media (hover: hover) {
-}
-
-/* ═══════════════════════════════════════════════════════════
-   📱 ریسپانسیو — موبایل
-   ═══════════════════════════════════════════════════════════ */
-
-@media (max-width: 520px) {
-  /* سبد — کمی کوچیک‌تر */
-
-  a.cart-fix {
-    width: 46px !important;
-    height: 46px !important;
-    bottom: 18px !important;
-    right: 12px !important;
-  }
-
-  a.cart-fix svg {
-    width: 20px !important;
-    height: 20px !important;
-  }
-
-  /* پیام‌رسان‌ها — کمی کوچیک‌تر */
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -5752,87 +4684,6 @@ a {
    RESPONSIVE — موبایل
    ═══════════════════════════════════════════════════════════ */
 
-@media (max-width: 860px) {
-  .r6-footer-box {
-    padding: 40px 5% 24px;
-  }
-
-  .r6-footer-top {
-    grid-template-columns: 1fr;
-    gap: 30px;
-    padding-bottom: 30px;
-  }
-
-  .r6-footer-brand {
-    text-align: center;
-  }
-
-  .r6-footer-logo {
-    justify-content: center;
-  }
-
-  .r6-footer-brand p {
-    max-width: 100%;
-    text-align: center;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .r6-footer-trust {
-    justify-content: center;
-  }
-
-  .r6-footer-contact {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 24px 0;
-  }
-}
-
-@media (max-width: 520px) {
-  .r6-footer-box {
-    padding: 32px 16px 20px;
-  }
-
-  .r6-footer-logo .r6-logo {
-    font-size: 24px;
-  }
-
-  .r6-footer-logo .r6-logo-en {
-    font-size: 10px;
-    letter-spacing: 3px;
-  }
-
-  .r6-footer-cols {
-    grid-template-columns: 1fr 1fr;
-    gap: 24px 16px;
-  }
-
-  .r6-footer-col + .r6-footer-col::before {
-    display: none;
-  }
-
-  .r6-footer-col b {
-    font-size: 14px;
-  }
-
-  .r6-footer-contact-item {
-    padding: 12px 14px;
-    gap: 12px;
-  }
-
-  .r6-footer-contact-icon {
-    width: 40px;
-    height: 40px;
-  }
-
-  .r6-footer-bottom {
-    flex-direction: column;
-    text-align: center;
-    justify-content: center;
-  }
-}
-
 /* ─── خط جداکننده با سایه ─── */
 
 .footer-line {
@@ -5841,151 +4692,6 @@ a {
   box-shadow: 0 2px 8px rgba(201, 169, 97, 0.6);
   margin: 0;
 }
-
-/* ═══════════════════════════════════════════════════════════
-   RESPONSIVE
-   ═══════════════════════════════════════════════════════════ */
-
-@media (max-width: 860px) {
-  .r6-footer {
-    margin-top: 40px !important;
-  }
-
-  .r6-footer-box {
-    padding: 36px 5% 24px;
-  }
-
-  .r6-footer-top {
-    grid-template-columns: 1fr;
-    gap: 30px;
-    padding-bottom: 24px;
-  }
-
-  .r6-footer-brand p {
-    max-width: 100%;
-  }
-
-  .r6-footer-contact {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 20px 0;
-  }
-}
-
-@media (max-width: 520px) {
-  .r6-footer {
-    margin-top: 30px !important;
-  }
-
-  .r6-footer-box {
-    padding: 28px 16px 18px;
-  }
-
-  .r6-footer-logo .r6-logo {
-    font-size: 22px;
-  }
-
-  .r6-footer-cols {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 22px 12px;
-  }
-
-  .r6-footer-col {
-    padding: 0;
-  }
-
-  .r6-footer-col + .r6-footer-col::before {
-    display: none;
-  }
-
-  .r6-footer-contact-item {
-    padding: 12px 14px;
-    gap: 12px;
-  }
-
-  .r6-footer-contact-icon {
-    width: 40px;
-    height: 40px;
-  }
-
-  .r6-footer-bottom {
-    justify-content: center;
-    text-align: center;
-  }
-}
-
-/* ═══════════════════════════════════════════════
-   اصلاح چیدمان کارت سبد — موبایل
-   ═══════════════════════════════════════════════ */
-
-@media (max-width: 640px) {
-  .cart-item {
-    grid-template-columns: 76px 1fr;
-    gap: 10px 12px;
-    padding: 12px;
-  }
-
-  .cart-item-side {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    border-top: 1px dashed var(--line);
-    padding-top: 12px;
-    width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-
-  /* stepper — تمام عرض بالا */
-
-  .cart-item-side .stepper {
-    flex: 1 1 100%;
-    width: 100% !important;
-    order: 1;
-    display: flex;
-    justify-content: center;
-  }
-
-  /* جمع ردیف — سمت راست، خط پایین */
-
-  .cart-item-side .cart-line-total {
-    flex: 1 1 auto;
-    order: 2;
-    text-align: right;
-    min-width: 0;
-  }
-
-  /* دکمه حذف — سمت چپ، خط پایین */
-
-  .cart-item-side .cart-remove-form {
-    flex: 0 0 auto;
-    order: 3;
-    margin: 0;
-  }
-
-  .cart-item-side .cart-remove {
-    white-space: nowrap;
-    padding: 8px 14px;
-    background: #fff0f0;
-    color: #c62828;
-    border-radius: 10px;
-    font-size: 0.74rem;
-    font-weight: 600;
-    transition: background 0.2s ease;
-  }
-
-  .cart-item-side .cart-remove:hover {
-    background: #ffe0e0;
-    text-decoration: none;
-  }
-}
-
-/* ═══ OVERRIDE: حذف سایه‌های جداکننده ═══ */
-
-/* ═══ OVERRIDE: حذف سایه‌های جداکننده ═══ */
 
 .r6-footer-box {
   box-shadow: none !important;
@@ -6100,12 +4806,6 @@ body {
   padding-bottom: 62px;
 }
 
-@media (max-width: 760px) {
-  body {
-    padding-bottom: calc(62px + env(safe-area-inset-bottom, 0));
-  }
-}
-
 /* چاپ */
 
 @media print {
@@ -6136,6 +4836,7 @@ body {
 
 .social-popup.is-open {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
   transform: translateY(0);
 }
@@ -6167,15 +4868,6 @@ body {
 
 .social-popup-btn.bale {
   background: #2a5f78;
-}
-
-/* در موبایل کمی بالاتر بیاید (چون نوار 56px) */
-
-@media (max-width: 760px) {
-  .social-popup {
-    bottom: calc(56px + env(safe-area-inset-bottom, 0) + 10px);
-    left: 12px;
-  }
 }
 
 @media print {
@@ -6289,19 +4981,6 @@ body {
   color: #3a2418;
   letter-spacing: 0.3px;
   direction: rtl;
-}
-
-/* ═══ موبایل ═══ */
-
-@media (max-width: 900px) {
-  .pdg-code-label {
-    bottom: 6px;
-    padding: 3px 10px;
-  }
-
-  .pdg-code-text {
-    font-size: 0.65rem;
-  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -6824,51 +5503,6 @@ body {
   font-size: 14px;
 }
 
-/* ───────── موبایل بزرگ (≤ 760px) — طرح Premium B2B ───────── */
-
-@media (max-width: 760px) {
-  .prod-info {
-    padding: 10px;
-    gap: 8px;
-  }
-
-  .prod-name {
-    font-size: 12px;
-    line-height: 1.7;
-  }
-
-  .prod-price-value {
-    font-size: 14px;
-  }
-
-  .prod-add-btn,
-  .prod-inquiry-btn {
-    height: 36px;
-    font-size: 11px;
-  }
-}
-
-/* ───────── موبایل کوچک (≤ 480px) — طرح Premium B2B ───────── */
-
-@media (max-width: 480px) {
-  .prod-info {
-    padding: 9px;
-    gap: 7px;
-  }
-
-  .prod-name {
-    font-size: 12px;
-  }
-
-  .prod-price-value {
-    font-size: 13px;
-  }
-
-  .prod-add-btn {
-    font-size: 11px;
-  }
-}
-
 /* ════════════════════════════════════════════════════════════════════
    RABETI FIXES — فیکس‌های دسترسی (ادغام‌شده از rabeti-fixes.css)
    این بلوک جایگزین فایل جداگانه‌ی rabeti-fixes.css شده است.
@@ -6884,29 +5518,19 @@ body {
   color: #7a6244; /* کنتراست ۵.۳۳ روی کرم */
 }
 
-/* ─── کنتراست صفحه اصلی — بالانویس‌ها و توضیحات بخش‌ها ─── */
-
-/* بالانویس بخش دسته‌بندی پریمیوم — #d67d3f روی کرم فقط ۲.۸۳ بود */
-
-.rp-eyebrow {
+/* .rp-eyebrow {
+  font-size: medium;
   color: #a25e2f; /* کنتراست ۴.۶۶ */
-}
-
-/* بالانویس بخش اینستاگرام — #e58a24 روی کرم فقط ۲.۴۳ بود */
+} */
 
 .r6-ig-eyebrow {
   color: #a06019; /* کنتراست ۴.۶۶ */
 }
 
-/* پاراگراف‌های توضیح زیر تیتر بخش‌ها — ۴.۱۶ روی کرم بود */
-
 .r6-ig-head-l p,
 .r6-custom-body p {
   color: #7f694e; /* کنتراست ۴.۸۳ روی کرم */
 }
-
-/* ─── target-size — نقطه‌های کاروسل اینستاگرام ───
-   حداقل ۲۴×۲۴px با فاصله مناسب بین آن‌ها. */
 
 .r6-ig-dot {
   width: 24px;
@@ -7047,7 +5671,7 @@ body {
 }
 
 .r6-drawer .r6-user-name {
-  font-size: 15px;
+  font-size: 11px;
   color: #492c1a;
   font-weight: 900;
   line-height: 1.8;
@@ -7076,7 +5700,7 @@ body {
 }
 
 .r6-drawer .r6-admin-box .r6-user-name {
-  font-size: 17px;
+  font-size: 11px;
 }
 
 /* منوی لینک‌ها */
@@ -7084,7 +5708,7 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 17px 10px 75px;
+  padding: 2px 10px 20px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -7196,31 +5820,6 @@ body {
   height: 100%;
 }
 
-/* موبایل‌های کوچک */
-@media (max-width: 380px) {
-  .r6-drawer {
-    width: calc(100% - 16px);
-    right: 8px;
-  }
-
-  .r6-drawer .drawer-user-box {
-    padding: 14px;
-  }
-
-  .r6-drawer .r6-avatar {
-    width: 60 px;
-    height: 60 px;
-    min-width: 60 px;
-  }
-
-  .r6-drawer .r6-user-name {
-    font-size: 14px;
-  }
-
-  .r6-drawer .r6-drawer-link {
-    font-size: 14px;
-  }
-}
 /* اصلاح ترتیب لایه‌های منوی موبایل */
 
 /* لایه تیره‌کننده فقط روی صفحه اصلی */
@@ -7281,8 +5880,728 @@ body {
   font-size: 0.88rem;
 }
 
+@media (max-width: 1080px) {
+  .prod-grid,
+  .r-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .header-inner {
+    height: 45px;
+  }
+
+  .container {
+    padding-inline: 20px;
+  }
+
+  .r6-footer-top {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══ موبایل ═══ */
+
+@media (max-width: 900px) {
+  .r6-footer-box {
+    padding: 40px 5% 24px;
+  }
+
+  .r6-footer-top {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding-bottom: 30px;
+  }
+
+  .r6-footer-brand {
+    text-align: center;
+  }
+
+  .r6-footer-logo {
+    justify-content: center;
+  }
+
+  .r6-footer-brand p {
+    max-width: 100%;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .r6-footer-trust {
+    justify-content: center;
+  }
+
+  .r6-footer-contact {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 24px 0;
+  }
+  .r6-footer {
+    margin-top: 40px !important;
+  }
+
+  .r6-footer-box {
+    padding: 36px 5% 24px;
+  }
+
+  .r6-footer-top {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding-bottom: 24px;
+  }
+
+  .r6-footer-brand p {
+    max-width: 100%;
+  }
+
+  .r6-footer-contact {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 20px 0;
+  }
+
+  .pdg-code-label {
+    bottom: 6px;
+    padding: 3px 10px;
+  }
+
+  .pdg-code-text {
+    font-size: 0.65rem;
+  }
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 820px) {
+  body.invoice-page {
+    padding: 12px;
+  }
+
+  .invoice-header {
+    padding: 22px 18px 18px;
+  }
+
+  .invoice-content {
+    padding: 22px 18px 24px;
+  }
+
+  .invoice-footer {
+    padding: 14px 18px;
+  }
+
+  .invoice-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .totals-box {
+    width: 100%;
+  }
+}
+
 /* موبایل */
 @media (max-width: 760px) {
+  .section {
+    padding: 45px 0;
+  }
+
+  .section-title {
+    font-size: 23px;
+  }
+
+  .prod-grid,
+  .r-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .r6-newwrap {
+    padding: 40px 0;
+  }
+
+  .r6-newwrap .head {
+    align-items: flex-start;
+  }
+
+  .r6-footer-cols {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .header-inner {
+    height: 45px;
+    padding: 0 1px;
+  }
+
+  .container {
+    padding-inline: 13px;
+  }
+
+  .header-left {
+    gap: 6px;
+  }
+
+  .header-action-btn,
+  .hamburger {
+    width: 38px;
+    height: 38px;
+  }
+
+  .r6-logo {
+    font-size: 21px;
+  }
+
+  .r6-logo-en {
+    font-size: 8px;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid var(--r6-line);
+    z-index: 1400;
+    box-shadow: 0 -6px 25px rgba(0, 0, 0, 0.06);
+  }
+
+  .bn-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: var(--r6-mut);
+    font-size: 9px;
+  }
+
+  .bn-item svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .bn-item.active {
+    color: var(--r6-brand);
+    font-weight: 800;
+  }
+
+  .bn-item.active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 25px;
+    height: 2px;
+    background: var(--r6-brand);
+    border-radius: 0 0 3px 3px;
+  }
+
+  .body.app-body {
+    padding-bottom: 0;
+  }
+
+  .app-body {
+    padding-bottom: 74px !important;
+  }
+
+  .r6-drawer {
+    width: min(280px, 90vw);
+  }
+
+  .home-hero {
+    min-height: min(540px, calc(100svh - 130px));
+  }
+
+  .auth-modal {
+    padding: 20px;
+  }
+
+  .auth-modal-overlay {
+    padding: 10px;
+  }
+
+  /*  1 */
+
+  .r6-hero {
+    min-height: 220px;
+  }
+
+  .r6-hero-content h1 {
+    font-size: clamp(1.7rem, 8vw, 2.2rem);
+  }
+
+  .r6-hero-cta .r-btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .r-sec-head h2 {
+    font-size: 1.05rem;
+  }
+
+  /*  2 */
+
+  .r6-hero {
+    /*
+     * تقریباً یک‌سوم ارتفاع موبایل
+     */
+    height: clamp(220px, 30svh, 280px);
+  }
+
+  .r6-hero-content {
+    padding: 18px 15px 22px;
+  }
+
+  .r6-hero-content h1 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+    margin-bottom: 6px;
+  }
+
+  .r6-hero-content p {
+    font-size: 0.78rem;
+    line-height: 1.8;
+
+    margin-bottom: 12px;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .r6-hero-cta {
+    gap: 7px;
+  }
+
+  .r6-hero-cta .r-btn {
+    min-width: 0;
+    flex: 1;
+
+    padding: 9px 10px;
+
+    font-size: 12px;
+  }
+
+  .r6-hero-prev,
+  .r6-hero-next {
+    width: 34px;
+    height: 34px;
+
+    font-size: 23px;
+  }
+
+  .r6-hero-prev {
+    right: 9px;
+  }
+
+  .r6-hero-next {
+    left: 9px;
+  }
+
+  .r6-hero-dots {
+    bottom: 8px;
+  }
+
+  /*  3 */
+
+  .auth-modal-overlay {
+    align-items: flex-start; /* از بالا شروع */
+    padding: 0;
+  }
+
+  .auth-modal {
+    max-width: 100%;
+    min-height: 100dvh; /* تمام صفحه */
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: 24px 20px 40px;
+    /* محتوا را در وسط عمودی قرار بده */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .auth-modal-close {
+    position: fixed; /* همیشه در دسترس */
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+  }
+
+  /* دکمه بستن روی پس‌زمینه محو بهتر دیده شود */
+
+  .auth-modal-overlay::before {
+    content: "×";
+    display: none;
+  }
+
+  /*  5 */
+  .prod-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .prod-info {
+    padding: 10px 11px 12px;
+  }
+
+  .prod-name {
+    min-height: 42px;
+    height: 42px;
+  }
+
+  .prod-name a {
+    line-height: 21px;
+  }
+
+  .prod-name {
+    font-size: 0.76rem;
+  }
+
+  .prod-price {
+    font-size: 0.86rem;
+  }
+
+  .prod-card .quick-add,
+  .prod-card .r6-add {
+    min-height: 38px;
+    font-size: 0.74rem;
+  }
+
+  /*  6 */
+
+  /* ═══ سبد خرید — نسخه مهندسی‌شده موبایل ═══ */
+
+  /* ردیف کارت: عکس کوچک + اطلاعات جمع‌وجور */
+
+  .cart-item {
+    display: grid !important;
+    grid-template-columns: 72px 1fr !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    border: 1px solid var(--line, #e6dcc9) !important;
+    box-shadow: 0 1px 4px rgba(74, 44, 26, 0.05);
+    margin-bottom: 10px !important;
+  }
+
+  .cart-item-img {
+    width: 72px !important;
+    height: 72px !important;
+    aspect-ratio: 1 !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+  }
+
+  .cart-item-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* عنوان و مشخصات فشرده */
+
+  .cart-item-info h3 {
+    font-size: 0.82rem !important;
+    margin: 0 0 2px !important;
+  }
+
+  .cart-item-info .card-attr {
+    font-size: 0.64rem !important;
+  }
+
+  .cart-item-price {
+    margin: 4px 0 !important;
+  }
+
+  .cart-item-price b {
+    font-size: 0.84rem !important;
+  }
+
+  .cart-item-price small {
+    font-size: 0.6rem !important;
+  }
+
+  .cart-item-warn {
+    font-size: 0.64rem !important;
+    padding: 4px 8px !important;
+  }
+
+  /* ردیف پایینی: تعداد و جمع و حذف در یک خط مرتب */
+
+  .cart-item-side {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    border-top: 1px dashed var(--line, #e6dcc9) !important;
+    padding-top: 10px !important;
+    margin: 0 !important;
+  }
+
+  .cart-item-side .stepper {
+    display: flex !important;
+    align-items: center;
+    border: 1px solid var(--line, #e6dcc9) !important;
+    border-radius: 20px !important;
+    padding: 2px !important;
+    width: auto !important;
+  }
+
+  .cart-item-side .step {
+    width: 28px !important;
+    height: 28px !important;
+    border: none !important;
+    border-radius: 50% !important;
+    font-size: 0.95rem !important;
+  }
+
+  .cart-item-side .step-num,
+  .cart-item-side .step-input {
+    width: 34px !important;
+    height: 28px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .cart-line-total {
+    text-align: left !important;
+  }
+
+  .cart-line-total small {
+    font-size: 0.58rem !important;
+  }
+
+  .cart-line-total b {
+    font-size: 0.82rem !important;
+  }
+
+  .cart-remove {
+    font-size: 0.68rem !important;
+    padding: 4px 8px;
+  }
+
+  /* خلاصه پایین — چسبیده و اپ‌مانند */
+
+  .cart-summary {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 50;
+    margin: 12px -16px 0 !important;
+    border-radius: 18px 18px 0 0 !important;
+    box-shadow: 0 -8px 28px rgba(74, 44, 26, 0.12);
+    padding: 16px 18px calc(14px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .cart-checkout-btn {
+    min-height: 48px !important;
+    font-size: 0.92rem !important;
+  }
+
+  /*  7*/
+  .invoice-page {
+    margin: 15px auto 35px;
+  }
+
+  .invoice-meta {
+    text-align: right;
+  }
+
+  .invoice-actions {
+    flex-direction: column;
+  }
+
+  .invoice-actions button,
+  .invoice-actions a {
+    width: 100%;
+  }
+
+  /*  8 */
+
+  .payment-page {
+    padding: 12px 12px 50px;
+  }
+
+  .payment-head {
+    flex-direction: column;
+    margin-top: 12px;
+  }
+
+  .payment-head h1 {
+    font-size: 24px;
+  }
+
+  .payment-invoice-number {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .payment-method-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-section {
+    padding: 17px;
+    border-radius: 15px;
+  }
+
+  .payment-summary {
+    padding: 5px 14px;
+    border-radius: 15px;
+  }
+
+  .payment-summary-row {
+    gap: 10px;
+  }
+
+  .payment-summary-row strong {
+    text-align: left;
+  }
+
+  .payment-result {
+    padding: 16px;
+  }
+
+  .bank-value-row {
+    align-items: stretch;
+  }
+
+  .bank-value-row code {
+    font-size: 13px;
+  }
+
+  .payment-submit {
+    width: 100%;
+  }
+
+  .payment-actions {
+    flex-direction: column;
+  }
+
+  .payment-actions .btn {
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  /*  9 */
+
+  /* ─── موبایل: تمام‌صفحه، دکمه ثابت ─── */
+
+  .auth-modal-overlay {
+    padding: 0 !important;
+    align-items: stretch !important;
+  }
+
+  .auth-modal {
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+
+  .auth-view .auth-pane {
+    padding: 14px 16px 18px !important;
+  }
+
+  .auth-view .form-field {
+    margin-bottom: 10px !important;
+  }
+
+  .auth-view .form-field input {
+    height: 42px !important;
+    padding: 0 10px !important;
+  }
+
+  .auth-view .auth-pane-title {
+    margin-bottom: 10px !important;
+    font-size: 17px !important;
+  }
+
+  .auth-view .auth-pane-note {
+    margin-bottom: 10px !important;
+  }
+
+  /* دکمه ثبت/ورود — sticky پایین */
+
+  .auth-view .co-submit {
+    position: sticky !important;
+    bottom: 12px !important;
+    width: calc(100% - 4px) !important;
+    min-height: 50px !important;
+    font-size: 0.95rem !important;
+    box-shadow: 0 -6px 20px rgba(74, 44, 26, 0.15);
+    z-index: 5;
+  }
+
+  .auth-modal-close {
+    position: fixed !important;
+    top: calc(10px + env(safe-area-inset-top)) !important;
+    left: 12px !important;
+  }
+
+  /*  10 */
+  .header-account-name,
+  .header-account-logout,
+  .header-account-btn {
+    display: none;
+  }
+
+  .header-account .auth-trigger {
+    min-height: 36px;
+    padding: 0 11px;
+    font-size: 10px;
+  }
+  /*  11 */
+  body {
+    padding-bottom: calc(62px + env(safe-area-inset-bottom, 0));
+  }
+  /*  12 */
+  /* در موبایل کمی بالاتر بیاید (چون نوار 56px) */
+  .social-popup {
+    bottom: calc(56px + env(safe-area-inset-bottom, 0) + 10px);
+    left: 12px;
+  }
+
+  /*  13 */
+  /* ───────── موبایل بزرگ (≤ 760px) — طرح Premium B2B ───────── */
+
+  .prod-info {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .prod-name {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .prod-price-value {
+    font-size: 14px;
+  }
+
+  .prod-add-btn,
+  .prod-inquiry-btn {
+    height: 36px;
+    font-size: 11px;
+  }
+
+  /*  14 */
+
   .r6-drawer {
     top: 8px;
     bottom: 65px;
@@ -7290,10 +6609,9 @@ body {
     width: min(300px, calc(100vw - 32px));
     max-width: 300px;
   }
-}
 
-/* نمایشگرهای کوتاه */
-@media (max-height: 750px) {
+  /*  15 */
+
   .r6-drawer .drawer-head {
     height: 58px;
     min-height: 58px;
@@ -7307,5 +6625,1242 @@ body {
     min-height: 39px;
     padding-top: 6px;
     padding-bottom: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .cart-item {
+    grid-template-columns: 76px 1fr;
+  }
+
+  .cart-item-side {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
+  }
+
+  .cart-item-side .stepper {
+    width: 100px;
+  }
+
+  body {
+    padding: 8px;
+    background: #f2f3f5;
+    font-size: 12px;
+  }
+
+  .invoice-page {
+    border-radius: 11px;
+  }
+
+  .brand-subtitle {
+    font-size: 9px;
+  }
+
+  .invoice-meta {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .status {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    margin: 11px 0;
+  }
+
+  .totals {
+    background: var(--soft);
+    border-radius: 9px;
+    padding: 9px 11px;
+  }
+
+  .invoice-footer {
+    flex-direction: column;
+    gap: 3px;
+  }
+  body.invoice-page {
+    padding: 0;
+    background: #fff;
+  }
+
+  .invoice-actions {
+    margin: 0;
+    padding: 10px;
+
+    background: #faf6ee;
+
+    flex-wrap: wrap;
+  }
+
+  .actions-right,
+  .actions-left {
+    flex: 1 1 auto;
+  }
+
+  .actions-right {
+    justify-content: flex-start;
+  }
+
+  .actions-left {
+    justify-content: flex-end;
+  }
+
+  .action-btn {
+    min-height: 40px;
+    padding: 0 11px;
+
+    font-size: 11px;
+  }
+
+  .invoice-sheet {
+    width: 100%;
+
+    border: 0;
+    border-radius: 0;
+
+    box-shadow: none;
+  }
+
+  .invoice-header-top {
+    align-items: flex-start;
+  }
+
+  .brand-logo {
+    width: 54px;
+    height: 54px;
+  }
+
+  .brand-name {
+    font-size: 20px;
+  }
+
+  .brand-subtitle {
+    font-size: 9px;
+  }
+
+  .invoice-title-label {
+    font-size: 10px;
+  }
+
+  .invoice-title-number {
+    font-size: 15px;
+  }
+
+  .invoice-meta {
+    grid-template-columns: 1fr;
+    gap: 7px;
+
+    margin-top: 17px;
+  }
+
+  .meta-card {
+    padding: 9px 11px;
+  }
+
+  .parties {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .payment-item-main {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .payment-item-amount {
+    font-size: 13px;
+  }
+
+  .payment-item-meta {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .invoice-bottom {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .totals-box {
+    padding: 15px;
+  }
+
+  .invoice-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cart-item {
+    grid-template-columns: 76px 1fr;
+    gap: 10px 12px;
+    padding: 12px;
+  }
+
+  .cart-item-side {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* stepper — تمام عرض بالا */
+
+  .cart-item-side .stepper {
+    flex: 1 1 100%;
+    width: 100% !important;
+    order: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* جمع ردیف — سمت راست، خط پایین */
+
+  .cart-item-side .cart-line-total {
+    flex: 1 1 auto;
+    order: 2;
+    text-align: right;
+    min-width: 0;
+  }
+
+  /* دکمه حذف — سمت چپ، خط پایین */
+
+  .cart-item-side .cart-remove-form {
+    flex: 0 0 auto;
+    order: 3;
+    margin: 0;
+  }
+
+  .cart-item-side .cart-remove {
+    white-space: nowrap;
+    padding: 8px 14px;
+    background: #fff0f0;
+    color: #c62828;
+    border-radius: 10px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    transition: background 0.2s ease;
+  }
+
+  .cart-item-side .cart-remove:hover {
+    background: #ffe0e0;
+    text-decoration: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   📱 ریسپانسیو — موبایل
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 520px) {
+  /* سبد — کمی کوچیک‌تر */
+
+  a.cart-fix {
+    width: 46px !important;
+    height: 46px !important;
+    bottom: 18px !important;
+    right: 12px !important;
+  }
+
+  a.cart-fix svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* پیام‌رسان‌ها — کمی کوچیک‌تر */
+  .r6-footer-box {
+    padding: 32px 16px 20px;
+  }
+
+  .r6-footer-logo .r6-logo {
+    font-size: 24px;
+  }
+
+  .r6-footer-logo .r6-logo-en {
+    font-size: 10px;
+    letter-spacing: 3px;
+  }
+
+  .r6-footer-cols {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 16px;
+  }
+
+  .r6-footer-col + .r6-footer-col::before {
+    display: none;
+  }
+
+  .r6-footer-col b {
+    font-size: 14px;
+  }
+
+  .r6-footer-contact-item {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .r6-footer-contact-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .r6-footer-bottom {
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .r6-footer {
+    margin-top: 30px !important;
+  }
+
+  .r6-footer-box {
+    padding: 28px 16px 18px;
+  }
+
+  .r6-footer-logo .r6-logo {
+    font-size: 22px;
+  }
+
+  .r6-footer-cols {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px 12px;
+  }
+
+  .r6-footer-col {
+    padding: 0;
+  }
+
+  .r6-footer-col + .r6-footer-col::before {
+    display: none;
+  }
+
+  .r6-footer-contact-item {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .r6-footer-contact-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .r6-footer-bottom {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+/* ───────── موبایل کوچک (≤ 480px) — طرح Premium B2B ───────── */
+
+@media (max-width: 480px) {
+  .prod-info {
+    padding: 9px 10px 11px;
+    gap: 3px;
+  }
+
+  .prod-cat,
+  .prod-code {
+    font-size: 0.6rem;
+  }
+
+  .prod-name {
+    font-size: 0.72rem;
+    min-height: 38px;
+    height: 38px;
+  }
+
+  .prod-name a {
+    line-height: 19px;
+  }
+
+  .prod-price {
+    font-size: 0.8rem;
+  }
+
+  .prod-card .quick-add,
+  .prod-card .r6-add {
+    min-height: 36px;
+    font-size: 0.7rem;
+  }
+  .prod-grid,
+  .r-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .pd-title {
+    font-size: 25px;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .r6-hero {
+    height: clamp(200px, 30svh, 260px);
+  }
+
+  .r6-hero-content {
+    padding: 14px 12px 18px;
+  }
+
+  .r6-hero-content h1 {
+    font-size: 1.35rem;
+  }
+
+  .r6-hero-content p {
+    font-size: 0.73rem;
+  }
+
+  .r6-hero-cta .r-btn {
+    font-size: 11px;
+  }
+
+  .r6-hero-prev,
+  .r6-hero-next {
+    width: 30px;
+    height: 30px;
+
+    font-size: 20px;
+  }
+  .invoice-actions {
+    gap: 6px;
+  }
+
+  .actions-right,
+  .actions-left {
+    width: 100%;
+  }
+
+  .actions-right {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .actions-left {
+    justify-content: stretch;
+  }
+
+  .actions-left .action-btn {
+    width: 100%;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
+
+  .invoice-header {
+    padding: 18px 14px 15px;
+  }
+
+  .invoice-content {
+    padding: 18px 14px 20px;
+  }
+
+  .invoice-header-top {
+    gap: 10px;
+  }
+
+  .brand-block {
+    gap: 9px;
+  }
+
+  .brand-logo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .brand-name {
+    font-size: 18px;
+  }
+
+  .invoice-title-number {
+    font-size: 13px;
+  }
+
+  .party-row {
+    grid-template-columns: 72px minmax(0, 1fr);
+    padding: 8px 12px;
+  }
+  .prod-info {
+    padding: 9px;
+    gap: 7px;
+  }
+
+  .prod-name {
+    font-size: 12px;
+  }
+
+  .prod-price-value {
+    font-size: 13px;
+  }
+
+  .prod-add-btn {
+    font-size: 11px;
+  }
+}
+
+/* موبایل‌های کوچک */
+@media (max-width: 380px) {
+  .r6-drawer {
+    width: calc(100% - 16px);
+    right: 8px;
+  }
+
+  .r6-drawer .drawer-user-box {
+    padding: 14px;
+  }
+
+  .r6-drawer .r6-avatar {
+    width: 60 px;
+    height: 60 px;
+    min-width: 60 px;
+  }
+
+  .r6-drawer .r6-user-name {
+    font-size: 11px;
+  }
+
+  .r6-drawer .r6-drawer-link {
+    font-size: 14px;
+  }
+}
+.prod-card .in-cart-badge {
+  display: none;
+}
+
+.prod-card.is-in-cart .in-cart-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #00666b;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  z-index: 2;
+}
+
+.prod-card.is-in-cart .in-cart-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.prod-card .prod-img {
+  position: relative;
+}
+
+.prod-price-now {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #004f53;
+  margin-bottom: 4px;
+}
+
+.prod-price-base {
+  display: block;
+  font-size: 0.7rem;
+  color: #8b7355;
+  margin-bottom: 6px;
+}
+
+.prod-price-badge {
+  font-size: 0.72rem;
+  color: #b8860b;
+  font-weight: 700;
+  background: #fdf8e9;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+/* ═══════════════════════════════════════════════════════
+   اصلاح عرض منو در موبایل (پر کردن صفحه)
+   ═══════════════════════════════════════════════════════ */
+
+/* هدر مشترک کشوی موبایل */
+.r6-drawer .drawer-user-box {
+  position: relative;
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  padding: 16px 22px;
+  padding-left: 62px;
+  border-bottom: 1px solid rgba(166, 132, 78, 0.18);
+}
+
+/* دکمه بستن */
+.r6-drawer .drawer-close {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(166, 132, 78, 0.25);
+  border-radius: 50%;
+  background: #fffaf1;
+  color: #80633d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.r6-drawer .drawer-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* اطلاعات کاربر */
+.r6-drawer .r6-user-info {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.r6-drawer .r6-user-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  color: #493c2d;
+  font-size: 12px;
+}
+
+/* نشان نقش */
+.r6-role-badge,
+.r6-group-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.r6-admin-badge {
+  background: #e9dfc9;
+  color: #785a2e;
+}
+
+.r6-customer-badge {
+  background: #e8f1ed;
+  color: #386b58;
+}
+
+.r6-group-badge {
+  background: #fff0d9;
+  color: #95652c;
+}
+
+/* لوگوی مهمان */
+.r6-drawer-brand {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: #493c2d;
+  line-height: 1.3;
+}
+
+.r6-brand-name {
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+.r6-brand-en {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #b58b4d;
+  direction: ltr;
+}
+/* ═══════════════════════════════════════════════════════
+   اصلاح منوی موبایل — تمام صفحه و چیدمان دسکتاپ
+   ═══════════════════════════════════════════════════════ */
+
+/* ۱. عرض منو در موبایل (تقریباً تمام صفحه) */
+@media (max-width: 768px) {
+  .r6-drawer {
+    width: 100% !important; /* تمام عرض صفحه */
+    max-width: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    border-radius: 0 !important; /* حذف گردی گوشه‌ها */
+  }
+}
+
+/* ۲. چیدمان هدر منو (لوگو راست، ضربدر چپ) */
+.drawer-header-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* المان‌ها را به دو طرف می‌چسباند */
+  padding: 16px 20px;
+  background: #fdfbf7;
+  border-bottom: 1px solid #f0ece6;
+  position: relative;
+  min-height: 60px;
+}
+
+/* استایل دکمه بستن (ضربدر) */
+.drawer-header-mobile .drawer-close {
+  width: 34px;
+  height: 34px;
+  background: #fff;
+  border: 1px solid #e6e0d7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  color: #3a2418;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  order: -1; /* در RTL، این باعث می‌شود المان به سمت چپ برود */
+}
+
+.drawer-header-mobile .drawer-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* استایل مشخصات کاربر یا لوگو (سمت راست) */
+.drawer-header-mobile .r6-user-info,
+.drawer-header-mobile .r6-brand {
+  order: 1; /* در RTL، این باعث می‌شود المان به سمت راست برود */
+  margin: 0;
+}
+/* ══════════════════════════════════════════════════════════════════
+   کشوی رابطی — لاکچری مینیمال (Cream & Champagne Gold)
+   اصول طراحی:
+     • فضای سفید سخاوتمندانه = لاکچری
+     • یک رنگ اکسنت: طلایی شامپاینی
+     • تایپوگرافی قوی، کنتراست بالا
+     • بدون خطوط و حاشیه‌های اضافی
+     • دکمه خروج گرد (pill)
+   • موبایل: تمام‌صفحه  |  دسکتاپ: 360px
+   • پشتیبانی از کلاس‌های is-open / open / active / show
+   ══════════════════════════════════════════════════════════════════ */
+
+:root {
+  --r6-cream: #faf6ee; /* کرم گرم — پس‌زمینه اصلی */
+  --r6-cream-soft: #f4ecdd; /* کرمی برای hover */
+  --r6-white: #ffffff;
+
+  --r6-gold: #a8841d; /* طلایی شامپاینی — اصیل و ملایم */
+  --r6-gold-light: #c9a85a; /* طلایی روشن‌تر برای اکسنت */
+  --r6-gold-soft: rgba(168, 132, 29, 0.08);
+
+  --r6-ink: #1c1814; /* متن اصلی — تیره، کنتراست بالا */
+  --r6-ink-soft: #8a7f6e; /* متن ثانویه */
+  --r6-line: rgba(168, 132, 29, 0.14); /* خطوط بسیار ظریف */
+
+  --r6-drawer-w: 360px;
+  --r6-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.r6-drawer,
+.r6-drawer *,
+.r6-drawer *::before,
+.r6-drawer *::after {
+  box-sizing: border-box !important;
+}
+
+/* ══════════ 1) overlay ══════════ */
+.overlay#overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9998 !important;
+  background: rgba(28, 24, 20, 0.45) !important;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.35s var(--r6-ease),
+    visibility 0.35s var(--r6-ease);
+}
+.overlay#overlay.is-open,
+.overlay#overlay.open,
+.overlay#overlay.active,
+.overlay#overlay.show {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  display: block !important;
+}
+
+/* ══════════ 2) بدنه کشو ══════════ */
+aside.r6-drawer#drawer {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 9999 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  width: var(--r6-drawer-w) !important;
+  max-width: 100% !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+
+  background: var(--r6-cream) !important;
+  color: var(--r6-ink) !important;
+  line-height: 1.7 !important;
+  font-family: "Vazirmatn", "IRANSansX", Tahoma, sans-serif !important;
+  letter-spacing: 0 !important;
+
+  transform: translateX(100%) !important;
+  pointer-events: none;
+
+  transition:
+    transform 0.4s var(--r6-ease),
+    visibility 0s linear 0.4s;
+
+  box-shadow: -24px 0 60px rgba(28, 24, 20, 0.18) !important;
+  will-change: transform;
+}
+
+aside.r6-drawer#drawer.is-open,
+aside.r6-drawer#drawer.open,
+aside.r6-drawer#drawer.active {
+  transform: translateX(0) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: flex !important;
+  pointer-events: auto !important;
+  z-index: 9999 !important;
+  transition:
+    transform 0.4s var(--r6-ease),
+    visibility 0s linear 0s;
+}
+
+/* خط طلایی ظریف بالای کشو */
+aside.r6-drawer#drawer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 2;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--r6-gold-light),
+    var(--r6-gold),
+    var(--r6-gold-light),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* ══════════ 3) هدر — تمیز و دوعمودی ══════════ */
+.r6-drawer .drawer-user-box {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 16px;
+
+  padding: 32px 28px 24px !important;
+  background: transparent !important;
+  border-bottom: 1px solid var(--r6-line) !important;
+}
+
+/* بلوک کاربر — نام در بالا، نشان‌ها در پایین (بدون تداخل با ضربدر) */
+.r6-drawer .r6-user-info,
+.r6-drawer .r6-user-block {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px;
+}
+
+/* پشتیبانی از ساختار قدیمی strong.r6-user-name */
+.r6-drawer .r6-user-name {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 8px;
+
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--r6-ink) !important;
+  line-height: 1.4;
+  word-break: break-word;
+  letter-spacing: -0.01em;
+}
+.r6-drawer .r6-user-name > span:first-child {
+  font-size: 17px;
+}
+
+/* ردیف نشان‌ها — جدا از نام، همیشه زیر نام و کنار ضربدر نیست */
+.r6-drawer .r6-user-name {
+  /* اگر ساختار قدیمی strong > span باشد، نشان‌ها در flex column می‌روند زیر نام */
+}
+
+/* ردیف نشان‌ها — جدا از نام، همیشه زیر نام */
+.r6-drawer .r6-badges {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+}
+
+/* نشان‌ها */
+.r6-drawer .r6-role-badge,
+.r6-drawer .r6-group-badge {
+  display: inline-flex !important;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.r6-drawer .r6-admin-badge {
+  background: var(--r6-gold-soft) !important;
+  color: var(--r6-gold) !important;
+  border: 1px solid rgba(168, 132, 29, 0.2);
+}
+.r6-drawer .r6-customer-badge {
+  background: rgba(62, 123, 82, 0.08) !important;
+  color: #3e7b52 !important;
+  border: 1px solid rgba(62, 123, 82, 0.18);
+}
+.r6-drawer .r6-group-badge {
+  background: transparent !important;
+  color: var(--r6-ink-soft) !important;
+  border: 1px solid var(--r6-line);
+}
+
+/* برند مهمان */
+.r6-drawer .r6-drawer-brand {
+  min-width: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px;
+  text-decoration: none !important;
+}
+.r6-drawer .r6-brand-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--r6-ink) !important;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.r6-drawer .r6-brand-en {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  color: var(--r6-gold) !important;
+  line-height: 1.8;
+  text-transform: uppercase;
+}
+
+/* ── دکمه ضربدر: مینیمال، شفاف، فقط آیکون ── */
+.r6-drawer .drawer-close {
+  order: 9 !important;
+  flex: 0 0 auto !important;
+
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin-top: -4px;
+
+  border: none !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--r6-ink-soft) !important;
+  cursor: pointer !important;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.2s ease;
+}
+.r6-drawer .drawer-close:hover {
+  background: var(--r6-gold-soft) !important;
+  color: var(--r6-gold) !important;
+}
+
+.r6-drawer .drawer-close:focus-visible {
+  outline: 2px solid var(--r6-gold);
+  outline-offset: 2px;
+}
+.r6-drawer .drawer-close svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* ══════════ 4) ناوبری — تمیز، بدون حاشیه آیکون ══════════ */
+.r6-drawer .drawer-nav {
+  flex: 1 1 auto !important;
+  min-height: 0;
+  overflow-y: auto !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px;
+  padding: 20px 16px !important;
+
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--r6-line) transparent;
+}
+.r6-drawer .drawer-nav::-webkit-scrollbar {
+  width: 3px;
+}
+.r6-drawer .drawer-nav::-webkit-scrollbar-thumb {
+  background: var(--r6-line);
+  border-radius: 999px;
+}
+
+.r6-drawer .r6-drawer-link {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px;
+  padding: 14px 16px !important;
+
+  border: none !important;
+  border-radius: 14px !important;
+  background: transparent !important;
+  text-decoration: none !important;
+
+  color: var(--r6-ink) !important;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    padding 0.25s ease;
+}
+.r6-drawer .r6-drawer-link:hover,
+.r6-drawer .r6-drawer-link:focus-visible {
+  background: var(--r6-gold-soft) !important;
+  color: var(--r6-gold) !important;
+  outline: none;
+  padding-right: 20px !important;
+}
+
+/* آیکون‌ها: بدون کادر، فقط طلایی */
+.r6-drawer .r6-link-icon {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+
+  border: none !important;
+  background: transparent !important;
+  color: var(--r6-gold) !important;
+
+  transition: transform 0.25s ease;
+}
+.r6-drawer .r6-drawer-link:hover .r6-link-icon {
+  transform: scale(1.08);
+}
+.r6-drawer .r6-link-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.r6-drawer .r6-link-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ══════════ 5) فوتر — دکمه گرد (pill) ══════════ */
+.r6-drawer .drawer-foot {
+  flex: 0 0 auto !important;
+  padding: 20px 24px !important;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+
+  background: transparent !important;
+  border-top: 1px solid var(--r6-line) !important;
+}
+
+/* دکمه خروج: گرد (pill)، تیره، با کنتراست بالا */
+.r6-drawer .r6-logout-link {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px;
+
+  width: 100% !important;
+  padding: 14px 28px !important;
+
+  border: none !important;
+  border-radius: 999px !important; /* گرد کامل = pill */
+  background: var(--r6-ink) !important;
+  color: var(--r6-cream) !important;
+
+  font-family: inherit !important;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  text-decoration: none !important;
+  cursor: pointer !important;
+
+  transition:
+    background 0.3s ease,
+    transform 0.2s ease,
+    box-shadow 0.3s ease;
+  box-shadow: 0 8px 20px rgba(28, 24, 20, 0.18);
+}
+.r6-drawer .r6-logout-link:hover {
+  background: #2d2820 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(28, 24, 20, 0.28);
+}
+.r6-drawer .r6-logout-link:active {
+  transform: translateY(0);
+}
+.r6-drawer .r6-logout-link:focus-visible {
+  outline: 2px solid var(--r6-gold);
+  outline-offset: 3px;
+}
+.r6-drawer .r6-logout-link svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* حالت مهمان: دکمه ورود با رنگ طلایی شامپاینی */
+.r6-drawer .r6-login-link {
+  background: var(--r6-gold) !important;
+  color: var(--r6-cream) !important;
+  box-shadow: 0 8px 20px rgba(168, 132, 29, 0.32);
+}
+.r6-drawer .r6-login-link:hover {
+  background: #8e6f18 !important;
+  box-shadow: 0 12px 28px rgba(168, 132, 29, 0.42);
+}
+.r6-drawer .r6-login-link:focus-visible {
+  outline-color: var(--r6-ink);
+}
+
+/* ══════════ 6) واکنش‌گرا ══════════ */
+
+@media (max-width: 767.98px) {
+  aside.r6-drawer#drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .r6-drawer .drawer-user-box {
+    padding: 28px 22px 20px !important;
+  }
+  .r6-drawer .drawer-nav {
+    padding: 16px 14px !important;
+  }
+  .r6-drawer .r6-drawer-link {
+    padding: 14px 14px !important;
+  }
+  .r6-drawer .drawer-foot {
+    padding: 16px 20px !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (min-width: 768px) {
+  aside.r6-drawer#drawer {
+    border-radius: 24px 0 0 24px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay#overlay,
+  aside.r6-drawer#drawer,
+  .r6-drawer .drawer-close,
+  .r6-drawer .r6-drawer-link,
+  .r6-drawer .r6-logout-link {
+    transition: none !important;
+  }
+  .r6-drawer .drawer-close:hover {
+    transform: none;
+  }
+}
+/* نوار پایین فقط در موبایل نمایش داده شود */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  /* ... بقیه استایل‌های فعلی ... */
+}
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex;
+  }
+
+  /* فاصله‌ی امن زیر محتوا تا نوار روی فوتر/محتوا نیفته */
+  body.app-body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 }

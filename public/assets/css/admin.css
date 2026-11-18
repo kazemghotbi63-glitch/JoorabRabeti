@@ -2083,7 +2083,10 @@
   font-weight: 600;
   text-decoration: none;
 
-  transition: background var(--admin-transition), color var(--admin-transition), border-color var(--admin-transition);
+  transition:
+    background var(--admin-transition),
+    color var(--admin-transition),
+    border-color var(--admin-transition);
 }
 
 .filter-tab:hover {
@@ -2562,7 +2565,7 @@
 }
 
 .file-box-btn::before {
-  content: '📎';
+  content: "📎";
   font-size: 0.8rem;
 }
 
@@ -2599,7 +2602,6 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
-
 
 /* ═══════════════════════════════════════════════════════════════════
    MOBILE FIXES v2 — رفع کامل به‌هم‌ریختگی موبایل (نوشتهٔ نو در انتهای فایل
@@ -2754,4 +2756,15 @@ body.admin-menu-fixed {
 .admin-table-wrap--in-card::-webkit-scrollbar-thumb {
   background: var(--admin-border-strong);
   border-radius: 3px;
+}
+.admin-content {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.order-grid {
+  width: 100%;
+  box-sizing: border-box;
 }

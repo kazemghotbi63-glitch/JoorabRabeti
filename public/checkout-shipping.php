@@ -1,6 +1,7 @@
 <?php
+/* [FILE] public/checkout-shipping.php — v3 (Tier/Factor/Free + Weight) */
 
-/* Auto-detect bootstrap (local + host) */
+/* ─── Auto-detect bootstrap ─── */
 $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
@@ -12,15 +13,15 @@ foreach ($__bp as $__b) {
     }
 }
 unset($__bp, $__b);
+
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/AddressService.php';
 require_once ROOT_PATH . '/app/services/ShippingService.php';
 require_once ROOT_PATH . '/app/services/PricingService.php';
 require_once ROOT_PATH . '/app/services/Time.php';
-/* ═══ نمایش شمسی و بازه فارسی ═══ */
 
-/* میلادی → جلالی */
+/* ═══ Helper های نمایش ═══ */
 $jalaliFa = static function (?string $gregorianDate): string {
     if (!$gregorianDate) return '—';
     $ts = strtotime($gregorianDate);
@@ -29,11 +30,12 @@ $jalaliFa = static function (?string $gregorianDate): string {
     $gy = (int)date('Y', $ts);
     $gm = (int)date('n', $ts);
     $gd = (int)date('j', $ts);
-    $g = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    $g  = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
     $jy = ($gy <= 1600) ? 0 : 979;
     $gy -= ($gy <= 1600) ? 621 : 1600;
     $gy2 = ($gm > 2) ? $gy + 1 : $gy;
-    $d = (365 * $gy) + intdiv($gy2 + 3, 4) - intdiv($gy2 + 99, 100) + intdiv($gy2 + 399, 400) - 80 + $gd + $g[$gm - 1];
+    $d = (365 * $gy) + intdiv($gy2 + 3, 4) - intdiv($gy2 + 99, 100)
+        + intdiv($gy2 + 399, 400) - 80 + $gd + $g[$gm - 1];
     $jy += 33 * intdiv($d, 12053);
     $d %= 12053;
     $jy += 4 * intdiv($d, 1461);
@@ -45,22 +47,18 @@ $jalaliFa = static function (?string $gregorianDate): string {
     $jm = ($d < 186) ? 1 + intdiv($d, 31) : 7 + intdiv($d - 186, 30);
     $jd = 1 + (($d < 186) ? $d % 31 : ($d - 186) % 30);
 
-    /* روز هفته فارسی */
     $days = [7 => 'یکشنبه', 1 => 'دوشنبه', 2 => 'سه‌شنبه', 3 => 'چهارشنبه', 4 => 'پنجشنبه', 5 => 'جمعه', 6 => 'شنبه'];
     $dayName = $days[(int)date('N', $ts)];
 
     return $dayName . ' ' . strtr(
-        $jy . '/' . str_pad((string)$jm, 2, '0', STR_PAD_LEFT) . '/' . str_pad((string)$jd, 2, '0', STR_PAD_LEFT),
+        sprintf('%04d/%02d/%02d', $jy, $jm, $jd),
         ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']
     );
 };
 
-/* بازه: 16:00-19:00 → «از ۴ عصر تا ۷ عصر» */
 $slotFa = static function (string $range): string {
     if (!str_contains($range, '-')) return $range;
     [$s, $e] = array_map('trim', explode('-', $range, 2));
-
-    /* اگر قبلاً فارسی است، دست نزن */
     if (!preg_match('/^\d{1,2}:\d{2}$/', $s)) return $range;
 
     $sh = (int)explode(':', $s)[0];
@@ -75,27 +73,15 @@ $slotFa = static function (string $range): string {
     return 'از ' . $fa($sh) . ' ' . $tod($sh) . ' تا ' . $fa($eh) . ' ' . $tod($eh);
 };
 
-
-
-
-
+/* ═══ احراز هویت ═══ */
 if (!is_logged_in()) {
     header('Location: /');
     exit;
 }
 
-$h = static fn($v) => htmlspecialchars(
-    (string)$v,
-    ENT_QUOTES,
-    'UTF-8'
-);
+$h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
-$userId = (int)(
-    $_SESSION['admin_id']
-    ?? $_SESSION['customer_id']
-    ?? 0
-);
-
+$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
 if ($userId <= 0) {
     header('Location: /');
     exit;
@@ -103,122 +89,123 @@ if ($userId <= 0) {
 
 $db = db();
 
-/*
-|--------------------------------------------------------------------------
-| آدرس انتخاب‌شده
-|--------------------------------------------------------------------------
-*/
-
-$addressId = (int)(
-    $_SESSION['checkout_address_id'] ?? 0
-);
-
-$address = AddressService::get(
-    $userId,
-    $addressId
-);
-
+/* ═══ ۱) آدرس ═══ */
+$addressId = (int)($_SESSION['checkout_address_id'] ?? 0);
+$address   = AddressService::get($userId, $addressId);
 if (!$address) {
     header('Location: /checkout-address');
     exit;
 }
 
-/*
-|--------------------------------------------------------------------------
-| گزینه‌های ارسال
-|--------------------------------------------------------------------------
-*/
+/* ═══ ۲) کوئری سبد ═══ */
+$userGroup = current_user_group();
+$stmt = $db->prepare("
+    SELECT
+        ci.product_id,
+        ci.qty,
+        p.base_price AS base_price,
+        (SELECT spec_value FROM product_specs
+         WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code
+    FROM cart_items ci
+    JOIN carts c     ON c.id = ci.cart_id
+    JOIN products p  ON p.id = ci.product_id
+    WHERE c.user_id = ? AND c.status = 'active'
+    ORDER BY ci.id ASC
+");
+$stmt->execute([$userId]);
+$cartItems = $stmt->fetchAll();
+
+/* ═══ ۳) محاسبه مبالغ سبد ═══ */
+$subtotal = 0;
+$discountTotal = 0;
+$finalSubtotal = 0;
+$totalQty = 0;
+foreach ($cartItems as $item) {
+    $qty = (int)$item['qty'];
+    if ($qty <= 0) continue;
+    $pricing = PricingService::calculate($db, (int)$item['product_id'], $qty, $userGroup);
+    if ($pricing['base_price'] <= 0) continue;
+    $subtotal      += (int)$pricing['base_line_total'];
+    $discountTotal += (int)$pricing['discount_amount'];
+    $finalSubtotal += (int)$pricing['line_total'];
+    $totalQty      += $qty;
+}
+
+/* ═══ ۴) شمارش واحدها ═══ */
+$unitCounts = [];
+$unitCountsNorm = [];
+foreach ($cartItems as $item) {
+    $qty = (int)$item['qty'];
+    if ($qty <= 0) continue;
+    $raw = (string)($item['unit_code'] ?? 'جفتی');
+    $unit = unit_label($raw);
+    $unitCounts[$unit] = ($unitCounts[$unit] ?? 0) + $qty;
+
+    $key = str_contains($raw, 'جین') ? 'جین'
+        : (str_contains($raw, 'بسته') ? 'بسته' : 'جفتی');
+    $unitCountsNorm[$key] = ($unitCountsNorm[$key] ?? 0) + $qty;
+}
+$qtyParts = [];
+foreach ($unitCounts as $u => $c) $qtyParts[] = number_format($c) . ' ' . $u;
+$qtyDisplay = $qtyParts ? implode(' + ', $qtyParts) : '۰ جفت';
+
+$cart = [
+    'subtotal'    => $subtotal,
+    'discount'    => $discountTotal,
+    'final'       => $finalSubtotal,
+    'total_qty'   => $totalQty,
+    'qty_display' => $qtyDisplay,
+];
+
+/* ═══ ۵) وزن + گزینه‌های ارسال ═══ */
+$weightInfo   = ShippingService::calculateCartWeight($db, $cartItems);
+$pairQtyTotal = (int)$weightInfo['pairs'];
+$weightGrams  = (int)$weightInfo['grams'];
 
 $options = ShippingService::getOptions(
-    (string)$address['province']
+    $db,
+    (string)$address['province'],
+    (string)($address['city'] ?? ''),
+    $pairQtyTotal,
+    $weightGrams,
+    (int)$cart['final'],
+    $unitCountsNorm
 );
 
 $error = '';
 
-/*
-|--------------------------------------------------------------------------
-| ذخیره انتخاب ارسال
-|--------------------------------------------------------------------------
-*/
-
+/* ═══ ۶) هندل POST ═══ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
-
-    $method = trim(
-        (string)($_POST['method'] ?? '')
-    );
-
-    $slotId = trim(
-        (string)($_POST['slot'] ?? '')
-    );
+    $method = trim((string)($_POST['method'] ?? ''));
+    $slotId = trim((string)($_POST['slot']   ?? ''));
 
     try {
-
-        if (
-            $method === ''
-            || !isset($options['methods'][$method])
-        ) {
-            throw new RuntimeException(
-                'روش ارسال انتخاب‌شده معتبر نیست.'
-            );
+        if ($method === '' || !isset($options['methods'][$method])) {
+            throw new RuntimeException('روش ارسال انتخاب‌شده معتبر نیست.');
         }
 
-        $selectedMethod =
-            $options['methods'][$method];
-
-        /*
-         * روش‌هایی که تاریخ/Slot دارند:
-         * پیک تهران و پست تهران
-         */
-        $requiresSlot =
-            !empty($selectedMethod['days']);
+        $selectedMethod = $options['methods'][$method];
+        $requiresSlot   = !empty($selectedMethod['days']);
 
         if ($requiresSlot) {
-
             if ($slotId === '') {
-                throw new RuntimeException(
-                    'لطفاً تاریخ و زمان ارسال را انتخاب کنید.'
-                );
+                throw new RuntimeException('لطفاً تاریخ و زمان ارسال را انتخاب کنید.');
             }
-
-            /*
-             * کنترل اینکه Slot واقعاً متعلق به همین روش
-             * و یکی از گزینه‌های فعلی باشد.
-             */
             $validSlot = false;
-
-            foreach (
-                $selectedMethod['days']
-                as $day
-            ) {
-
-                foreach (
-                    $day['slots']
-                    as $slot
-                ) {
-
-                    if (
-                        $slot['id'] === $slotId
-                        && !empty($slot['available'])
-                    ) {
+            foreach ($selectedMethod['days'] as $day) {
+                foreach ($day['slots'] as $slot) {
+                    if ($slot['id'] === $slotId && !empty($slot['available'])) {
                         $validSlot = true;
                         break 2;
                     }
                 }
             }
-
             if (!$validSlot) {
-                throw new RuntimeException(
-                    'بازه ارسال انتخاب‌شده دیگر موجود نیست. لطفاً گزینه دیگری انتخاب کنید.'
-                );
+                throw new RuntimeException('بازه ارسال انتخاب‌شده دیگر موجود نیست. لطفاً گزینه دیگری انتخاب کنید.');
             }
         } else {
-
-            /*
-             * پست شهرستان و تحویل حضوری
-             * اصلاً Slot ندارند.
-             */
             $slotId = '';
         }
 
@@ -231,127 +218,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: /checkout-review');
         exit;
     } catch (RuntimeException $e) {
-
         $error = $e->getMessage();
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| خلاصه سبد + قیمت‌گذاری پلکانی
-|--------------------------------------------------------------------------
-|
-| قیمت پایه از min_qty=1 گرفته می‌شود.
-| سپس PricingService بر اساس تعداد واقعی هر محصول،
-| tier صحیح را انتخاب می‌کند.
-|
-*/
-$userGroup = current_user_group();
-$stmt = $db->prepare("
-    SELECT
-        ci.product_id,
-        ci.qty,
-        p.base_price AS base_price,
-        (SELECT spec_value FROM product_specs 
-         WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code
-    FROM cart_items ci
-
-    JOIN carts c
-        ON c.id = ci.cart_id
-
-    JOIN products p
-        ON p.id = ci.product_id
-
-    WHERE c.user_id = ?
-      AND c.status = 'active'
-
-    ORDER BY ci.id ASC
-");
-
-$stmt->execute([$userId]);
-
-$cartItems = $stmt->fetchAll();
-
-/*
-|--------------------------------------------------------------------------
-| محاسبه نهایی سبد
-|--------------------------------------------------------------------------
-*/
-
-$subtotal = 0;
-$discountTotal = 0;
-$finalSubtotal = 0;
-$totalQty = 0;
-
-foreach ($cartItems as $item) {
-
-    $productId = (int)$item['product_id'];
-    $qty = (int)$item['qty'];
-
-    if ($qty <= 0) {
-        continue;
-    }
-
-    $pricing = PricingService::calculate(
-        $db,
-        $productId,
-        $qty,
-        $userGroup
-    );
-
-    // اگر قیمت پایه صفر بود، این قلم را نادیده بگیر
-    if ($pricing['base_price'] <= 0) {
-        continue;
-    }
-
-    $subtotal       += (int)$pricing['base_line_total'];
-    $discountTotal  += (int)$pricing['discount_amount'];
-    $finalSubtotal  += (int)$pricing['line_total'];
-    $totalQty       += $qty;
-}
-/*
-|--------------------------------------------------------------------------
-| سازگاری با ساختار قبلی $cart
-|--------------------------------------------------------------------------
-*/
-
-/* شمارش بر اساس واحد (برای نمایش «۵ جین + ۳ بسته») */
-$unitCounts = [];
-
-// کوئری باید unit_code را برگرداند
-foreach ($cartItems as $item) {
-    $qty = (int)$item['qty'];
-    if ($qty <= 0) continue;
-    $unit = unit_label($item['unit_code'] ?? 'جفتی');
-    if (!isset($unitCounts[$unit])) $unitCounts[$unit] = 0;
-    $unitCounts[$unit] += $qty;
-}
-
-$qtyParts = [];
-foreach ($unitCounts as $unit => $count) {
-    $qtyParts[] = number_format($count) . ' ' . $unit;
-}
-$qtyDisplay = $qtyParts ? implode(' + ', $qtyParts) : '۰ جفت';
-
-$cart = [
-    'subtotal'    => $subtotal,
-    'discount'    => $discountTotal,
-    'final'       => $finalSubtotal,
-    'total_qty'   => $totalQty,
-    'qty_display' => $qtyDisplay,
-];
-
-/*
-|--------------------------------------------------------------------------
-| عنوان صفحه
-|--------------------------------------------------------------------------
-*/
-
+/* ═══ ۷) رندر ═══ */
 $activeMenu = '';
-$pageTitle = 'روش ارسال | رابطی';
-
+$pageTitle  = 'روش ارسال | رابطی';
 ob_start();
-
 ?>
 
 <nav class="breadcrumb">
@@ -362,465 +236,209 @@ ob_start();
 </nav>
 
 <section class="catalog-head">
-
-    <h1 class="catalog-title">
-        روش و زمان ارسال
-    </h1>
-
+    <h1 class="catalog-title">روش و زمان ارسال</h1>
     <p class="catalog-sub">
-        سفارش به:
-        <?= $h($address['province']) ?>،
-        <?= $h($address['city']) ?>
+        سفارش به: <?= $h($address['province']) ?>، <?= $h($address['city']) ?>
     </p>
-
 </section>
 
-<?php if ($error): ?>
-
-    <div
-        class="form-alert error"
-        style="display:block;">
-        ⚠️ <?= $h($error) ?>
+<?php if (!empty($options['warning'])): ?>
+    <div style="background:#fef3c7;border:1px solid #f59e0b;color:#92400e;
+                padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:13px;">
+        ⚠️ <?= $h($options['warning']) ?>
     </div>
-
 <?php endif; ?>
 
-<form
-    method="post"
-    class="co-form shipping-form"
-    id="shippingForm">
+<div style="font-size:12px;color:#64748b;margin-bottom:14px;">
+    📦 وزن: <b><?= number_format($weightGrams / 1000, 1) ?> کیلوگرم</b>
+    — <?= number_format($pairQtyTotal) ?> جفت
+    <!-- — منطقه: <b><?= $h(match ($options['zone']) {
+                            'near' => 'نزدیک',
+                            'far' => 'دور',
+                            'very_far' => 'خیلی دور',
+                            default => $options['zone']
+                        }) ?></b> -->
+</div>
+
+<?php if ($error): ?>
+    <div class="form-alert error" style="display:block;">⚠️ <?= $h($error) ?></div>
+<?php endif; ?>
+
+<form method="post" class="co-form shipping-form" id="shippingForm">
     <?= csrf_field() ?>
 
     <?php foreach ($options['methods'] as $mKey => $m): ?>
-
-        <?php
-        $hasDays = !empty($m['days']);
-        ?>
+        <?php $hasDays = !empty($m['days']); ?>
+        <?php $isFree = ((int)$m['fee'] === 0 && (($m['calc']['calc_mode'] ?? '') === 'free')); ?>
 
         <div class="ship-method-block">
-
             <label class="pay-method">
-
                 <input
                     type="radio"
                     name="method"
                     value="<?= $h($mKey) ?>"
                     data-fee="<?= (int)$m['fee'] ?>"
-                    data-has-days="<?= $hasDays ? '1' : '0' ?>"
-                    required>
+                    data-has-days="<?= $hasDays ? '1' : '0' ?>">
+                required>
 
                 <span class="pay-method-body">
-
                     <b>
-                        <?= $h($m['label']) ?>
-                        —
-                        <?= number_format((float)$m['fee']) ?>
-                        تومان
+                        <?= $h($m['label']) ?> —
+                        <?php if ($isFree): ?>
+                            <span style="color:#166534">رایگان</span>
+                        <?php else: ?>
+                            <?= number_format((float)$m['fee']) ?> تومان
+                        <?php endif; ?>
+                        <?php if ($isFree): ?>
+                            <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;
+                                         font-size:10px;font-weight:800;margin-right:6px;">🎁</span>
+                        <?php endif; ?>
                     </b>
-
                     <?php if ($hasDays): ?>
-
                         <small>
-                            پنجره
-                            <?= count($m['days']) ?>
-                            روز آینده
+                            <?= $mKey === 'post'
+                                ? 'هزینه ثابت بر اساس مبلغ سفارش شما'
+                                : 'پنجره ' . count($m['days']) . ' روز آینده' ?>
                         </small>
-
                     <?php else: ?>
-
-                        <small>
-                            <?= !empty($m['estimate'])
-                                ? $h($m['estimate'])
-                                : 'بدون نیاز به انتخاب تاریخ و ساعت'
-                            ?>
-                        </small>
-
+                        <small><?= !empty($m['estimate']) ? $h($m['estimate']) : 'بدون نیاز به انتخاب تاریخ و ساعت' ?></small>
                     <?php endif; ?>
-
                 </span>
-
             </label>
 
             <?php if ($hasDays): ?>
-
-                <div
-                    class="ship-days"
-                    data-method="<?= $h($mKey) ?>"
-                    style="display:none;">
-
+                <div class="ship-days" data-method="<?= $h($mKey) ?>" style="display:none;">
                     <?php foreach ($m['days'] as $day): ?>
-
                         <div class="ship-day">
-
-                            <div class="ship-day-label">
-                                <?= $h($day['label']) ?>
-                            </div>
-
+                            <div class="ship-day-label"><?= $h($day['label']) ?></div>
                             <div class="ship-slots">
-
                                 <?php foreach ($day['slots'] as $slot): ?>
-
-                                    <label
-                                        class="ship-slot <?= !$slot['available'] ? 'is-full' : '' ?>">
-
+                                    <label class="ship-slot <?= !$slot['available'] ? 'is-full' : '' ?>">
                                         <input
                                             type="radio"
                                             name="slot"
                                             value="<?= $h($slot['id']) ?>"
                                             <?= !$slot['available'] ? 'disabled' : '' ?>>
-
-
                                         <span><?= $h($slotFa($slot['label'])) ?></span>
-
                                         <?php if (!$slot['available']): ?>
-
-                                            <em>
-                                                تکمیل
-                                            </em>
-
+                                            <em>تکمیل</em>
                                         <?php elseif ((int)$slot['left'] <= 2): ?>
-
-                                            <em class="almost">
-                                                <?= number_format((int)$slot['left']) ?>
-                                                ظرفیت باقی‌مانده
-                                            </em>
-
+                                            <em class="almost"><?= number_format((int)$slot['left']) ?> ظرفیت باقی‌مانده</em>
                                         <?php endif; ?>
-
                                     </label>
-
                                 <?php endforeach; ?>
-
                             </div>
-
                         </div>
-
                     <?php endforeach; ?>
-
                 </div>
-
             <?php endif; ?>
-
         </div>
-
     <?php endforeach; ?>
 
-
-    <div
-        class="cart-summary"
-        style="margin-top:20px;">
-
-        <!-- جمع قیمت پایه -->
+    <div class="cart-summary" style="margin-top:20px;">
         <div class="cart-summary-row">
-
-            <span>
-                جمع کالاها
-                (<?= $h($cart['qty_display'] ?? number_format((int)$cart['total_qty']) . ' جفت') ?>)
-            </span>
-
-            <b>
-                <?= number_format((float)$cart['subtotal']) ?>
-                تومان
-            </b>
-
+            <span>جمع کالاها (<?= $h($cart['qty_display'] ?? number_format((int)$cart['total_qty']) . ' جفت') ?>)</span>
+            <b><?= number_format((float)$cart['subtotal']) ?> تومان</b>
         </div>
-
-
-        <!-- تخفیف حجمی -->
 
         <?php if ((int)$cart['discount'] > 0): ?>
-
             <div class="cart-summary-row">
-
-                <span>
-                    تخفیف خرید عمده
-                </span>
-
-                <b>
-                    <?= number_format((float)$cart['discount']) ?>
-                    تومان
-                </b>
-
+                <span>تخفیف خرید عمده</span>
+                <b><?= number_format((float)$cart['discount']) ?> تومان</b>
             </div>
-
         <?php endif; ?>
 
-
-        <!-- مبلغ کالا بعد از تخفیف -->
-
         <div class="cart-summary-row">
-
-            <span>
-                مبلغ کالا پس از تخفیف
-            </span>
-
-            <b>
-                <?= number_format((float)$cart['final']) ?>
-                تومان
-            </b>
-
+            <span>مبلغ کالا پس از تخفیف</span>
+            <b><?= number_format((float)$cart['final']) ?> تومان</b>
         </div>
 
-
-        <!-- هزینه ارسال -->
-
         <div class="cart-summary-row">
-
-            <span>
-                هزینه ارسال
-            </span>
-
-            <b id="shipFeeView">
-                — انتخاب کنید
-            </b>
-
+            <span>هزینه ارسال</span>
+            <b id="shipFeeView">— انتخاب کنید</b>
         </div>
-
-
-        <!-- مبلغ نهایی -->
 
         <div class="cart-summary-row total">
-
-            <span>
-                مبلغ نهایی
-            </span>
-
-            <b id="totalView">
-                <?= number_format((float)$cart['final']) ?>
-                تومان
-            </b>
-
+            <span>مبلغ نهایی</span>
+            <b id="totalView"><?= number_format((float)$cart['final']) ?> تومان</b>
         </div>
 
-
-        <button
-            type="submit"
-            class="btn btn-primary cart-checkout-btn">
+        <button type="submit" class="btn btn-primary cart-checkout-btn">
             ادامه و مشاهده خلاصه ←
         </button>
-
     </div>
-
 </form>
-
 
 <script>
     (function() {
+        const form = document.getElementById('shippingForm');
+        if (!form) return;
 
-        const form =
-            document.getElementById(
-                'shippingForm'
-            );
-
-        if (!form) {
-            return;
-        }
-
-        /*
-         * مبلغ واقعی کالا پس از تخفیف
-         */
-        const subtotal =
-            <?= (int)$cart['final'] ?>;
-
-        const feeView =
-            document.getElementById(
-                'shipFeeView'
-            );
-
-        const totalView =
-            document.getElementById(
-                'totalView'
-            );
-
-        const methodInputs =
-            form.querySelectorAll(
-                'input[name="method"]'
-            );
-
-        const slotInputs =
-            form.querySelectorAll(
-                'input[name="slot"]'
-            );
-
+        const subtotal = <?= (int)$cart['final'] ?>;
+        const feeView = document.getElementById('shipFeeView');
+        const totalView = document.getElementById('totalView');
+        const methodInputs = form.querySelectorAll('input[name="method"]');
+        const slotInputs = form.querySelectorAll('input[name="slot"]');
 
         function updateShippingUI(selected) {
+            document.querySelectorAll('.ship-days').forEach(box => box.style.display = 'none');
 
-            document
-                .querySelectorAll('.ship-days')
-                .forEach(function(box) {
-
-                    box.style.display =
-                        'none';
-
-                });
-
-
-            /*
-             * هیچ روش ارسال انتخاب نشده
-             */
             if (!selected) {
-
-                feeView.textContent =
-                    '— انتخاب کنید';
-
-                totalView.textContent =
-                    subtotal.toLocaleString(
-                        'fa-IR'
-                    ) +
-                    ' تومان';
-
+                feeView.textContent = '— انتخاب کنید';
+                totalView.textContent = subtotal.toLocaleString('fa-IR') + ' تومان';
                 return;
             }
 
+            const hasDays = selected.dataset.hasDays === '1';
+            const fee = Number(selected.dataset.fee || 0);
 
-            const hasDays =
-                selected.dataset.hasDays === '1';
-
-
-            const fee =
-                Number(
-                    selected.dataset.fee || 0
-                );
-
-
-            /*
-             * فقط روش‌هایی که Slot دارند
-             * پنجره روز را نمایش دهند.
-             */
             if (hasDays) {
-
-                const block =
-                    document.querySelector(
-                        '.ship-days[data-method="' +
-                        CSS.escape(
-                            selected.value
-                        ) +
-                        '"]'
-                    );
-
-                if (block) {
-                    block.style.display =
-                        'block';
-                }
+                const block = document.querySelector('.ship-days[data-method="' + CSS.escape(selected.value) + '"]');
+                if (block) block.style.display = 'block';
             }
 
+            feeView.textContent = fee === 0 ? 'رایگان' : fee.toLocaleString('fa-IR') + ' تومان';
+            totalView.textContent = (subtotal + fee).toLocaleString('fa-IR') + ' تومان';
 
-            feeView.textContent =
-                fee.toLocaleString(
-                    'fa-IR'
-                ) +
-                ' تومان';
-
-
-            totalView.textContent =
-                (
-                    subtotal + fee
-                ).toLocaleString(
-                    'fa-IR'
-                ) +
-                ' تومان';
-
-
-            /*
-             * Slot برای روش دارای روز الزامی است.
-             * برای روش بدون روز کاملاً آزاد است.
-             */
-            slotInputs.forEach(
-                function(slot) {
-
-                    slot.required =
-                        hasDays;
-
-                }
-            );
+            // مهم: required را از همه slot ها بردارید (اعتبارسنجی دستی می‌کنیم)
+            slotInputs.forEach(slot => {
+                slot.required = false;
+            });
         }
 
+        methodInputs.forEach(radio => {
+            radio.addEventListener('change', function() {
+                slotInputs.forEach(s => {
+                    s.checked = false;
+                });
+                updateShippingUI(radio);
+            });
+        });
 
-        methodInputs.forEach(
-            function(radio) {
-
-                radio.addEventListener(
-                    'change',
-                    function() {
-
-                        /*
-                         * با تغییر روش،
-                         * Slot قبلی را پاک می‌کنیم.
-                         */
-                        slotInputs.forEach(
-                            function(slot) {
-
-                                slot.checked =
-                                    false;
-
-                            }
-                        );
-
-                        updateShippingUI(
-                            radio
-                        );
-                    }
-                );
-
+        form.addEventListener('submit', function(event) {
+            const selected = form.querySelector('input[name="method"]:checked');
+            if (!selected) {
+                event.preventDefault();
+                alert('لطفاً روش ارسال را انتخاب کنید.');
+                return;
             }
-        );
-
-
-        /*
-         * کنترل نهایی قبل از ارسال فرم
-         */
-        form.addEventListener(
-            'submit',
-            function(event) {
-
-                const selected =
-                    form.querySelector(
-                        'input[name="method"]:checked'
-                    );
-
-                if (!selected) {
-
+            const hasDays = selected.dataset.hasDays === '1';
+            if (hasDays) {
+                const selectedSlot = form.querySelector('input[name="slot"]:checked');
+                if (!selectedSlot) {
                     event.preventDefault();
-
-                    alert(
-                        'لطفاً روش ارسال را انتخاب کنید.'
-                    );
-
-                    return;
+                    alert('لطفاً تاریخ و زمان ارسال را انتخاب کنید.');
                 }
-
-
-                const hasDays =
-                    selected.dataset.hasDays === '1';
-
-
-                if (hasDays) {
-
-                    const selectedSlot =
-                        form.querySelector(
-                            'input[name="slot"]:checked'
-                        );
-
-                    if (!selectedSlot) {
-
-                        event.preventDefault();
-
-                        alert(
-                            'لطفاً تاریخ و زمان ارسال را انتخاب کنید.'
-                        );
-
-                        return;
-                    }
-                }
-
             }
-        );
+        });
 
+        const initialSelected = form.querySelector('input[name="method"]:checked');
+        if (initialSelected) {
+            updateShippingUI(initialSelected);
+        }
     })();
 </script>
 
 <?php
-
 $content = ob_get_clean();
-
 require ROOT_PATH . '/views/layouts/main.php';

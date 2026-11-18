@@ -32,7 +32,6 @@ $success = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
-
     $do = $_POST['do'] ?? '';
 
     /* ─── افزودن ─── */
@@ -48,8 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'نام دسته‌بندی باید حداقل ۲ حرف باشد.';
         } else {
 
+            /* اگر والد ارسال شده، باید واقعاً یک دستهٔ ریشه باشد */
             if ($parentId !== null) {
-                $stmt = $db->prepare("SELECT id FROM categories WHERE id = ? LIMIT 1");
+                $stmt = $db->prepare("SELECT id FROM categories WHERE id = ? AND parent_id IS NULL LIMIT 1");
                 $stmt->execute([$parentId]);
                 if (!$stmt->fetchColumn()) {
                     $parentId = null;
@@ -109,7 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if ($icon === '') {
                         $oldIcon = trim($category['icon'] ?? '');
-                        $icon = ($oldIcon === '' || str_starts_with($oldIcon, '/uploads/'))
+                        /* آیکون قبلی اگر مسیر عکس است، با ایموجی پیش‌فرض جایگزین کن */
+                        $icon = (substr($oldIcon, 0, 9) === '/uploads/')
                             ? '🧦'
                             : $oldIcon;
                     }
@@ -266,9 +267,9 @@ function self_is_descendant(PDO $db, int $candidate, int $ancestor): bool
 }
 
 /**
- * برگرداندن لیست درختی + محصولات تجمیعی
+ * لیست دسته‌های اصلی (ریشه) + فرزندهای هر یک + تعداد محصولات تجمیعی.
  */
-function build_category_tree(PDO $db): array
+function load_category_hierarchy(PDO $db): array
 {
     $rows = $db->query("
         SELECT
@@ -278,415 +279,1293 @@ function build_category_tree(PDO $db): array
         ORDER BY c.sort_order ASC, c.id ASC
     ")->fetchAll();
 
-    /* گروه‌بندی بر اساس والد */
-    $byParent = [];
+    $roots    = [];
+    $children = [];   // parentId => [rows]
+
     foreach ($rows as $r) {
-        $pid = $r['parent_id'] !== null ? (int)$r['parent_id'] : 0;
-        $byParent[$pid][] = $r;
+        if ($r['parent_id'] === null) {
+            $roots[] = $r;
+        } else {
+            $children[(int)$r['parent_id']][] = $r;
+        }
     }
 
-    /* مرتب‌سازی بازگشتی — محصولات تجمیعی */
-    $flat = [];
-
-    $walk = function (int $parentId, int $depth) use (&$walk, &$flat, $byParent): int {
-        $total = 0;
-        foreach ($byParent[$parentId] ?? [] as $row) {
-
-            $childrenProducts = $walk((int)$row['id'], $depth + 1);
-
-            $totalHere = (int)$row['own_products'] + $childrenProducts;
-
-            $row['depth'] = $depth;
-            $row['product_count'] = $totalHere;
-            $flat[] = $row;
-
-            $total += $totalHere;
+    /* محاسبهٔ تعداد محصولات تجمیعی هر والد */
+    foreach ($roots as &$root) {
+        $childRows = $children[(int)$root['id']] ?? [];
+        $childSum  = (int)$root['own_products'];
+        foreach ($childRows as $ch) {
+            $childSum += (int)$ch['own_products'];
         }
-        return $total;
-    };
+        $root['product_count'] = $childSum;
+    }
+    unset($root);
 
-    $walk(0, 0);
-
-    return $flat;
+    return [$roots, $children];
 }
 
-$categories = build_category_tree($db);
-
-/* همه دسته‌ها برای dropdown والد */
-$allCategories = $db->query("
-    SELECT id, name, parent_id
-    FROM categories
-    ORDER BY sort_order, id
-")->fetchAll();
+[$rootCategories, $childrenByParent] = load_category_hierarchy($db);
 
 $activeMenu = 'categories';
 $pageTitle  = 'دسته‌بندی‌ها';
+
+/* آماده‌سازی دادهٔ فرم در حالت خطا (برای بازگردانی مقادیر) */
+$lastForm = [
+    'name'       => '',
+    'icon'       => '',
+    'sort_order' => 99,
+    'parent_id'  => 0,
+];
 
 ob_start();
 ?>
 
 <style>
-    .cat-tree-name {
+    /* ═══════════════════════════════════════════════════════════
+       استایل اختصاصی صفحهٔ دسته‌بندی‌ها
+       ═══════════════════════════════════════════════════════════ */
+
+    .cat-page {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+    }
+
+    /* ─── کارت‌های بخش ─── */
+    .cat-section {
+        background: var(--admin-surface);
+        border: 1px solid var(--admin-border);
+        border-radius: var(--admin-radius-lg);
+        box-shadow: var(--admin-shadow-sm);
+        overflow: hidden;
+    }
+
+    .cat-section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 22px;
+        background: var(--admin-primary-soft);
+        border-bottom: 1px solid var(--admin-border);
+        flex-wrap: wrap;
+    }
+
+    .cat-section-head h2 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--admin-primary-dark);
+        margin: 0;
         display: flex;
         align-items: center;
         gap: 8px;
     }
 
-    .cat-tree-indent {
-        display: inline-block;
-        color: #cbd5e1;
-        font-family: monospace;
-        letter-spacing: -2px;
-        user-select: none;
-    }
-
-    .cat-badge-parent {
-        display: inline-block;
-        padding: 2px 8px;
-        background: #ecfeff;
-        color: #0e7490;
+    .cat-section-head .cat-section-count {
+        font-size: .75rem;
+        color: var(--admin-text-muted);
+        background: var(--admin-surface);
+        padding: 3px 10px;
         border-radius: 999px;
-        font-size: .65rem;
-        margin-inline-start: 6px;
+        border: 1px solid var(--admin-border);
     }
 
-    .cat-badge-child {
-        display: inline-block;
-        padding: 2px 8px;
-        background: #f1f5f9;
-        color: #64748b;
-        border-radius: 999px;
-        font-size: .65rem;
-        margin-inline-start: 6px;
+    .cat-section-body {
+        padding: 20px 22px 24px;
     }
 
-    .cat-row-parent {
-        background: #f8fafc;
+    /* ─── کارت‌های دستهٔ اصلی ─── */
+    .cat-root-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 16px;
     }
 
-    .cat-row-parent td {
+    .cat-root-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        background: var(--admin-surface);
+        border: 1.5px solid var(--admin-border);
+        border-radius: var(--admin-radius-md);
+        padding: 16px 14px 14px;
+        transition: border-color var(--admin-transition), box-shadow var(--admin-transition);
+    }
+
+    .cat-root-card:hover {
+        border-color: var(--admin-primary);
+        box-shadow: var(--admin-shadow-md);
+    }
+
+    .cat-root-card.is-inactive {
+        opacity: .55;
+    }
+
+    .cat-root-thumb {
+        width: 64px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--admin-surface-soft);
+        border: 1px solid var(--admin-border);
+        border-radius: var(--admin-radius-md);
+        margin-bottom: 12px;
+        overflow: hidden;
+    }
+
+    .cat-root-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .cat-root-thumb .emoji {
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .cat-root-name {
         font-weight: 700;
+        font-size: 1rem;
+        color: var(--admin-text);
+        margin-bottom: 6px;
+        word-break: break-word;
+    }
+
+    .cat-root-meta {
+        font-size: .75rem;
+        color: var(--admin-text-muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        margin-bottom: 16px;
+    }
+
+    .cat-root-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .cat-root-actions {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .cat-root-btnrow {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .cat-badge-status {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        font-size: .65rem;
+        padding: 3px 9px;
+        border-radius: 999px;
+        line-height: 1.6;
+        font-weight: 600;
+    }
+
+    .cat-badge-status.on {
+        background: var(--admin-success-soft);
+        color: var(--admin-success);
+    }
+
+    .cat-badge-status.off {
+        background: var(--admin-danger-soft);
+        color: var(--admin-danger);
+    }
+
+    /* ─── زیرمجموعه‌های هر والد ─── */
+    .cat-sub-wrap {
+        margin-top: 18px;
+        padding: 16px;
+        background: var(--admin-surface-soft);
+        border: 1px dashed var(--admin-border-strong);
+        border-radius: var(--admin-radius-md);
+    }
+
+    .cat-sub-wrap.is-empty {
+        padding: 18px;
+        text-align: center;
+        color: var(--admin-text-muted);
+        font-size: .85rem;
+    }
+
+    .cat-sub-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--admin-border);
+    }
+
+    .cat-sub-head h4 {
+        margin: 0;
+        font-size: .9rem;
+        font-weight: 700;
+        color: var(--admin-text);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .cat-sub-head h4 span {
+        color: var(--admin-text-muted);
+        font-weight: 400;
+        font-size: .75rem;
+    }
+
+    /* لیست زیرمجموعه‌ها */
+    .cat-sub-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* آیتم زیرمجموعه */
+    .cat-sub-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--admin-surface);
+        border: 1px solid var(--admin-border);
+        border-radius: 12px;
+        padding: 10px 14px;
+        transition: all var(--admin-transition);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .cat-sub-item:hover {
+        border-color: var(--admin-primary);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transform: translateY(-1px);
+    }
+
+    .cat-sub-item.is-inactive {
+        opacity: .6;
+        background: var(--admin-surface-soft);
+    }
+
+    /* تصویر */
+    .cat-sub-thumb {
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--admin-surface-soft);
+        border: 1px solid var(--admin-border);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .cat-sub-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .cat-sub-thumb .emoji {
+        font-size: 1.4rem;
+        line-height: 1;
+    }
+
+    /* اطلاعات */
+    .cat-sub-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cat-sub-name {
+        font-weight: 700;
+        font-size: .85rem;
+        color: var(--admin-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 4px;
+    }
+
+    .cat-sub-meta {
+        font-size: .7rem;
+        color: var(--admin-text-muted);
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    /* ─── دکمه‌های عملیات زیرمجموعه (لاکچری) ─── */
+    .cat-sub-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+        background: var(--admin-surface-soft);
+        padding: 4px;
+        border-radius: 10px;
+    }
+
+    .cat-sub-actions .btn {
+        padding: 0 !important;
+        width: 30px !important;
+        height: 30px !important;
+        min-width: 30px !important;
+        font-size: .8rem !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--admin-text-soft);
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .cat-sub-actions .btn:hover {
+        background: var(--admin-surface);
+        border-color: var(--admin-border);
+        color: var(--admin-text);
+    }
+
+    .cat-sub-actions .btn[title="حذف"]:hover {
+        background: var(--admin-danger-soft);
+        border-color: var(--admin-danger);
+        color: var(--admin-danger);
+    }
+
+    .cat-sub-actions .btn.cat-edit-btn {
+        background: var(--admin-info-soft) !important;
+        color: var(--admin-info) !important;
+        border-color: transparent !important;
+    }
+
+    .cat-sub-actions .btn.cat-edit-btn:hover {
+        background: var(--admin-info) !important;
+        color: #fff !important;
+    }
+
+    /* ─── فرم افزودن (inline زیر کارت اصلی) ─── */
+    .cat-add-form {
+        display: grid;
+        grid-template-columns: 1.6fr 70px 1fr 80px auto;
+        gap: 12px;
+        align-items: end;
+    }
+
+    .cat-add-form .pf-field-label {
+        display: block;
+        font-size: .7rem;
+        color: var(--admin-text-muted);
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+
+    .cat-add-form input[type="text"],
+    .cat-add-form input[type="number"],
+    .cat-add-form input[type="file"] {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1px solid var(--admin-border);
+        border-radius: var(--admin-radius-md);
+        font-family: inherit;
+        font-size: .82rem;
+        background: var(--admin-surface);
+        height: 40px;
+    }
+
+    .cat-add-form input[type="file"] {
+        padding: 6px 8px;
+        font-size: .72rem;
+    }
+
+    .cat-add-form input:focus {
+        outline: none;
+        border-color: var(--admin-info);
+        box-shadow: 0 0 0 3px var(--admin-info-soft);
+    }
+
+    /* ─── هشدارها ─── */
+    .cat-alert {
+        padding: 12px 18px;
+        border-radius: var(--admin-radius-md);
+        font-size: .85rem;
+        margin-bottom: 18px;
+        border: 1px solid transparent;
+    }
+
+    .cat-alert.error {
+        background: var(--admin-danger-soft);
+        color: var(--admin-danger);
+        border-color: var(--admin-danger);
+    }
+
+    .cat-alert.success {
+        background: var(--admin-success-soft);
+        color: var(--admin-success);
+        border-color: var(--admin-success);
+    }
+
+    /* ─── دکمهٔ افزودن زیرمجموعه ─── */
+    .btn-add-sub {
+        background: var(--admin-info-soft);
+        color: var(--admin-info);
+        border: 1px solid var(--admin-info);
+        transition: all 0.2s;
+    }
+
+    .btn-add-sub:hover {
+        background: var(--admin-info);
+        color: #fff;
+    }
+
+    /* ─── مودال افزودن زیرمجموعه ─── */
+    .cat-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(18, 30, 35, .55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+    }
+
+    .cat-modal-overlay.is-open {
+        display: flex;
+    }
+
+    .cat-modal {
+        background: var(--admin-surface);
+        border-radius: var(--admin-radius-lg);
+        width: 100%;
+        max-width: 540px;
+        max-height: 90vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: var(--admin-shadow-md);
+    }
+
+    .cat-modal-head {
+        padding: 16px 22px;
+        background: var(--admin-primary-soft);
+        border-bottom: 1px solid var(--admin-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .cat-modal-head h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--admin-primary-dark);
+    }
+
+    .cat-modal-close {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        color: var(--admin-text-muted);
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background var(--admin-transition);
+    }
+
+    .cat-modal-close:hover {
+        background: var(--admin-border);
+        color: var(--admin-text);
+    }
+
+    .cat-modal-body {
+        padding: 22px;
+        overflow-y: auto;
+    }
+
+    .cat-modal-field {
+        margin-bottom: 16px;
+    }
+
+    .cat-modal-field label {
+        display: block;
+        font-size: .78rem;
+        color: var(--admin-text-soft);
+        margin-bottom: 6px;
+        font-weight: 500;
+    }
+
+    .cat-modal-field input[type="text"],
+    .cat-modal-field input[type="number"],
+    .cat-modal-field select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid var(--admin-border);
+        border-radius: var(--admin-radius-md);
+        font-family: inherit;
+        font-size: .9rem;
+        background: var(--admin-surface);
+    }
+
+    .cat-modal-field input:focus,
+    .cat-modal-field select:focus {
+        outline: none;
+        border-color: var(--admin-info);
+        box-shadow: 0 0 0 3px var(--admin-info-soft);
+    }
+
+    .cat-modal-file {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .cat-modal-file .cat-file-btn {
+        padding: 9px 14px;
+        background: var(--admin-surface-soft);
+        border: 1px solid var(--admin-border);
+        border-radius: var(--admin-radius-md);
+        font-size: .8rem;
+        cursor: pointer;
+        color: var(--admin-text-soft);
+    }
+
+    .cat-modal-file .cat-file-name {
+        font-size: .78rem;
+        color: var(--admin-text-muted);
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cat-modal-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+    }
+
+    .cat-modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 16px;
+        border-top: 1px solid var(--admin-border);
+        margin-top: 6px;
+    }
+
+    /* ─── لیست زیرمجموعه‌های موجود در داخل مودال ─── */
+    .cat-modal-existing {
+        margin-top: 18px;
+        padding: 12px;
+        background: var(--admin-surface-soft);
+        border-radius: var(--admin-radius-md);
+        border: 1px solid var(--admin-border);
+    }
+
+    .cat-modal-existing h4 {
+        margin: 0 0 10px;
+        font-size: .8rem;
+        color: var(--admin-text-soft);
+        font-weight: 600;
+    }
+
+    .cat-modal-existing-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .cat-modal-existing-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        background: var(--admin-surface);
+        border: 1px solid var(--admin-border);
+        border-radius: 8px;
+        font-size: .8rem;
+    }
+
+    .cat-modal-existing-item.is-inactive {
+        opacity: .55;
+    }
+
+    .cat-modal-existing-item .emoji {
+        font-size: 1rem;
+    }
+
+    .cat-modal-existing-empty {
+        font-size: .78rem;
+        color: var(--admin-text-muted);
+        text-align: center;
+        padding: 8px;
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 860px) {
+        .cat-add-form {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .cat-add-form .cat-add-submit {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .cat-sub-item {
+            flex-wrap: wrap;
+            padding: 12px;
+            gap: 10px;
+        }
+
+        .cat-sub-thumb {
+            width: 40px;
+            height: 40px;
+        }
+
+        .cat-sub-info {
+            width: calc(100% - 55px);
+        }
+
+        .cat-sub-actions {
+            width: 100%;
+            justify-content: flex-end;
+            margin-top: 6px;
+            padding: 6px;
+            background: var(--admin-surface-soft);
+            border-radius: 8px;
+        }
+
+        .cat-sub-actions .btn {
+            width: 36px !important;
+            height: 36px !important;
+            min-width: 36px !important;
+            font-size: .9rem !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .cat-section-head {
+            padding: 12px 14px;
+        }
+
+        .cat-section-body {
+            padding: 14px 14px 18px;
+        }
+
+        .cat-root-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
-<?php if ($error): ?>
-    <div class="form-alert error" style="display:block;margin-bottom:18px;">
-        <?= htmlspecialchars($error) ?>
+<div class="cat-page">
+
+    <?php if ($error): ?>
+        <div class="cat-alert error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+    <?php endif; ?>
+
+    <?php if ($success): ?>
+        <div class="cat-alert success"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></div>
+    <?php endif; ?>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         بخش ۱: دسته‌های اصلی (ریشه)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="cat-section">
+
+        <div class="cat-section-head">
+            <h2>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10l2 2h6.5A1.5 1.5 0 0 1 20 7.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" />
+                </svg>
+                دسته‌های اصلی
+            </h2>
+            <span class="cat-section-count"><?= count($rootCategories) ?> دسته</span>
+        </div>
+
+        <div class="cat-section-body">
+
+            <?php if (empty($rootCategories)): ?>
+                <div style="text-align:center;padding:30px 20px;color:var(--admin-text-muted);font-size:.88rem;">
+                    هنوز هیچ دستهٔ اصلی ثبت نشده است.<br>
+                    از فرم زیر اولین دستهٔ اصلی (مثلاً «مردانه»، «زنانه»، «بچگانه») را اضافه کنید.
+                </div>
+            <?php else: ?>
+
+                <div class="cat-root-grid">
+
+                    <?php foreach ($rootCategories as $root):
+
+                        $rootId    = (int)$root['id'];
+                        $imagePath = trim($root['image_path'] ?? '');
+                        $iconVal   = trim($root['icon'] ?? '');
+                        if (substr($iconVal, 0, 9) === '/uploads/') $iconVal = '🧦';
+
+                        $childRows = $childrenByParent[$rootId] ?? [];
+                        $childCount = count($childRows);
+                        $isActive  = (int)$root['is_active'] === 1;
+                        $sortOrder = (int)$root['sort_order'];
+                    ?>
+
+                        <div class="cat-root-card <?= $isActive ? '' : 'is-inactive' ?>">
+
+                            <span class="cat-badge-status <?= $isActive ? 'on' : 'off' ?>">
+                                <?= $isActive ? 'فعال' : 'غیرفعال' ?>
+                            </span>
+
+                            <div class="cat-root-thumb">
+                                <?php if ($imagePath !== ''): ?>
+                                    <img src="<?= htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8') ?>" alt="">
+                                <?php else: ?>
+                                    <span class="emoji"><?= htmlspecialchars($iconVal ?: '🧦', ENT_QUOTES, 'UTF-8') ?></span>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="cat-root-name"><?= htmlspecialchars($root['name'], ENT_QUOTES, 'UTF-8') ?></div>
+
+                            <div class="cat-root-meta">
+                                <span>📦 <?= number_format((int)$root['product_count']) ?> محصول</span>
+                                <span>↳ <?= $childCount ?> زیرمجموعه</span>
+                                <span>#=<?= $sortOrder ?></span>
+                            </div>
+
+                            <div class="cat-root-actions">
+
+                                <button type="button"
+                                    class="btn btn-add-sub cat-add-sub-btn"
+                                    data-parent-id="<?= $rootId ?>"
+                                    data-parent-name="<?= htmlspecialchars($root['name'], ENT_QUOTES, 'UTF-8') ?>"
+                                    style="padding:8px 12px;font-size:.78rem;">
+                                    + افزودن زیرمجموعه
+                                </button>
+
+                                <div class="cat-root-btnrow">
+                                    <button type="button" class="btn cat-edit-btn"
+                                        data-id="<?= $rootId ?>"
+                                        data-name="<?= htmlspecialchars($root['name'], ENT_QUOTES, 'UTF-8') ?>"
+                                        data-icon="<?= htmlspecialchars($iconVal, ENT_QUOTES, 'UTF-8') ?>"
+                                        data-sort="<?= $sortOrder ?>"
+                                        data-parent="0"
+                                        style="background:var(--admin-info-soft);color:var(--admin-info);padding:0 8px;height:28px;font-size:.72rem;">
+                                        ✏️ ویرایش
+                                    </button>
+
+                                    <form method="post" style="display:inline; margin:0;">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="do" value="move">
+                                        <input type="hidden" name="id" value="<?= $rootId ?>">
+                                        <input type="hidden" name="dir" value="up">
+                                        <button type="submit" title="بالا" class="btn" style="padding:0;width:28px;height:28px;font-size:.7rem;">▲</button>
+                                    </form>
+
+                                    <form method="post" style="display:inline; margin:0;">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="do" value="move">
+                                        <input type="hidden" name="id" value="<?= $rootId ?>">
+                                        <input type="hidden" name="dir" value="down">
+                                        <button type="submit" title="پایین" class="btn" style="padding:0;width:28px;height:28px;font-size:.7rem;">▼</button>
+                                    </form>
+
+                                    <form method="post" style="display:inline; margin:0;">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="do" value="toggle">
+                                        <input type="hidden" name="id" value="<?= $rootId ?>">
+                                        <button class="btn" style="padding:0 8px;height:28px;font-size:.7rem;">
+                                            <?= $isActive ? 'غیرفعال' : 'فعال' ?>
+                                        </button>
+                                    </form>
+
+                                    <form method="post" style="display:inline; margin:0;" onsubmit="return confirm('حذف «<?= htmlspecialchars($root['name'], ENT_QUOTES, 'UTF-8') ?>»؟');">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="do" value="delete">
+                                        <input type="hidden" name="id" value="<?= $rootId ?>">
+                                        <button class="btn" style="padding:0;width:28px;height:28px;font-size:.75rem;background:var(--admin-danger-soft);color:var(--admin-danger);">🗑</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                    <?php endforeach; ?>
+
+                </div>
+
+            <?php endif; ?>
+
+            <!-- فرم افزودن دستهٔ اصلی (بدون فیلد والد) -->
+            <div style="margin-top:22px;padding:16px 18px;background:var(--admin-surface-soft);border:1px solid var(--admin-border);border-radius:var(--admin-radius-md);">
+                <h3 style="font-size:.85rem;color:var(--admin-primary-dark);margin:0 0 12px;font-weight:700;">
+                    ➕ افزودن دستهٔ اصلی جدید
+                </h3>
+
+                <form method="post" enctype="multipart/form-data" class="cat-add-form">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="do" value="add">
+                    <input type="hidden" name="parent_id" value="0">
+
+                    <div>
+                        <label class="pf-field-label">نام دستهٔ اصلی</label>
+                        <input type="text" name="name" required placeholder="مثلاً: مردانه"
+                            value="<?= htmlspecialchars($lastForm['name'], ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+
+                    <div>
+                        <label class="pf-field-label">ایموجی</label>
+                        <input type="text" name="icon" placeholder="🧦" style="text-align:center;font-size:1.1rem;">
+                    </div>
+
+                    <div>
+                        <label class="pf-field-label">عکس (اختیاری)</label>
+                        <input type="file" name="icon_img" accept="image/jpeg,image/png,image/webp" style="font-size:.72rem;">
+                    </div>
+
+                    <div>
+                        <label class="pf-field-label">ترتیب</label>
+                        <input type="number" name="sort_order" value="99" min="0" style="text-align:center;">
+                    </div>
+
+                    <button type="submit" class="btn btn-orange cat-add-submit" style="padding:11px 22px;font-size:.82rem;height:40px;">
+                        + افزودن دسته
+                    </button>
+                </form>
+            </div>
+
+        </div>
     </div>
-<?php endif; ?>
 
-<?php if ($success): ?>
-    <div class="form-alert" style="display:block;margin-bottom:18px;background:#e8f7f3;color:var(--teal-800);">
-        <?= htmlspecialchars($success) ?>
-    </div>
-<?php endif; ?>
+    <!-- ═══════════════════════════════════════════════════════════
+         بخش ۲: زیرمجموعه‌ها (نمای کلی، تفکیک‌شده بر اساس والد)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="cat-section">
 
-<!-- ═══ افزودن ═══ -->
-<div class="admin-card" style="padding:18px;margin-bottom:22px;">
-    <h2 class="section-title" style="font-size:1rem;margin-bottom:14px;">
-        افزودن دسته‌بندی جدید
-    </h2>
-
-    <form method="post" enctype="multipart/form-data"
-        style="display:grid;grid-template-columns:1.4fr 1.2fr 80px 1fr 100px auto;gap:10px;align-items:end;">
-        <?= csrf_field() ?>
-
-        <input type="hidden" name="do" value="add">
-
-        <div>
-            <label style="display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;">نام</label>
-            <input type="text" name="name" required
-                style="width:100%;padding:10px 14px;border:1px solid var(--card-border);border-radius:12px;font-family:inherit;">
+        <div class="cat-section-head">
+            <h2>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 17V7l-3 3" />
+                    <path d="M9 7h6" />
+                    <path d="M15 7v10l3-3" />
+                </svg>
+                زیرمجموعه‌ها (بر اساس دستهٔ اصلی)
+            </h2>
+            <span class="cat-section-count">
+                <?= number_format(array_sum(array_map('count', $childrenByParent))) ?> زیرمجموعه
+            </span>
         </div>
 
-        <div>
-            <label style="display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;">دسته والد</label>
-            <select name="parent_id"
-                style="width:100%;padding:10px;border:1px solid var(--card-border);border-radius:12px;">
-                <option value="0">— بدون والد (دسته اصلی) —</option>
-                <?php foreach ($allCategories as $c): ?>
-                    <?php if ($c['parent_id'] === null): ?>
-                        <option value="<?= (int)$c['id'] ?>">
-                            <?= htmlspecialchars($c['name']) ?>
-                        </option>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            </select>
-        </div>
+        <div class="cat-section-body">
 
-        <div>
-            <label style="display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;">ایموجی</label>
-            <input type="text" name="icon" placeholder="🧦"
-                style="width:100%;text-align:center;padding:10px;border:1px solid var(--card-border);border-radius:12px;font-size:1.1rem;">
-        </div>
-
-        <div>
-            <label style="display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;">عکس</label>
-            <input type="file" name="icon_img" accept="image/jpeg,image/png,image/webp" style="font-size:.72rem;">
-        </div>
-
-        <div>
-            <label style="display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;">ترتیب</label>
-            <input type="number" name="sort_order" value="99" min="0"
-                style="width:100%;padding:10px;border:1px solid var(--card-border);border-radius:12px;text-align:center;">
-        </div>
-
-        <button type="submit" class="btn btn-orange" style="padding:11px 22px;font-size:.82rem;">
-            + افزودن
-        </button>
-    </form>
-</div>
-
-<!-- ═══ لیست درختی ═══ -->
-<div class="admin-table-wrap">
-    <table class="admin-table">
-        <thead>
-            <tr>
-                <th style="width:120px;">ترتیب</th>
-                <th style="width:80px;">تصویر</th>
-                <th>نام</th>
-                <th style="width:110px;">محصولات</th>
-                <th style="width:110px;">وضعیت</th>
-                <th style="min-width:320px;">عملیات</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($categories as $index => $c): ?>
-                <?php
-                $isParent = ($c['parent_id'] === null);
-                $rowClass = $isParent ? 'cat-row-parent' : '';
-                $depth    = (int)$c['depth'];
+            <?php if (empty($rootCategories)): ?>
+                <div style="text-align:center;padding:20px;color:var(--admin-text-muted);font-size:.85rem;">
+                    ابتدا یک دستهٔ اصلی بسازید تا بتوانید زیرمجموعه اضافه کنید.
+                </div>
+            <?php else: ?>
+                <?php foreach ($rootCategories as $root):
+                    $rootId = (int)$root['id'];
+                    $childRows = $childrenByParent[$rootId] ?? [];
                 ?>
-                <tr class="<?= $rowClass ?>">
+                    <div class="cat-sub-wrap <?= empty($childRows) ? 'is-empty' : '' ?>"
+                        style="margin-bottom:18px;">
 
-                    <td>
-                        <div style="display:flex;align-items:center;gap:4px;">
-                            <b><?= (int)$c['sort_order'] ?></b>
-                            <form method="post" style="display:inline;">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="do" value="move">
-                                <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                                <input type="hidden" name="dir" value="up">
-                                <button type="submit" title="بالا"
-                                    style="border:none;background:none;cursor:pointer;color:var(--teal-800);font-size:.8rem;padding:0 2px;">▲</button>
-                            </form>
-                            <form method="post" style="display:inline;">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="do" value="move">
-                                <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                                <input type="hidden" name="dir" value="down">
-                                <button type="submit" title="پایین"
-                                    style="border:none;background:none;cursor:pointer;color:var(--teal-800);font-size:.8rem;padding:0 2px;">▼</button>
-                            </form>
-                        </div>
-                    </td>
-
-                    <td>
-                        <?php
-                        $imagePath = trim($c['image_path'] ?? '');
-                        $iconVal = trim($c['icon'] ?? '');
-                        if (str_starts_with($iconVal, '/uploads/')) $iconVal = '🧦';
-                        ?>
-                        <?php if ($imagePath !== ''): ?>
-                            <img src="<?= htmlspecialchars($imagePath) ?>" alt=""
-                                style="width:52px;height:52px;object-fit:cover;border-radius:12px;border:1px solid var(--card-border);">
-                        <?php else: ?>
-                            <span style="font-size:1.7rem;"><?= htmlspecialchars($iconVal ?: '🧦') ?></span>
-                        <?php endif; ?>
-                    </td>
-
-                    <td>
-                        <div class="cat-tree-name">
-                            <?php if ($depth > 0): ?>
-                                <span class="cat-tree-indent">
-                                    <?= str_repeat('───', $depth) ?>▸
-                                </span>
-                            <?php endif; ?>
-
-                            <b><?= htmlspecialchars($c['name']) ?></b>
-
-                            <?php if ($isParent): ?>
-                                <span class="cat-badge-parent">دسته اصلی</span>
-                            <?php else: ?>
-                                <span class="cat-badge-child">زیرمجموعه</span>
-                            <?php endif; ?>
-                        </div>
-                    </td>
-
-                    <td>
-                        <?php if ((int)$c['product_count'] > 0): ?>
-                            <b><?= number_format((int)$c['product_count']) ?></b>
-                        <?php else: ?>
-                            <span style="color:var(--muted);">0</span>
-                        <?php endif; ?>
-                    </td>
-
-                    <td>
-                        <span class="st-badge <?= $c['is_active'] ? 'st-converted' : 'st-rejected' ?>">
-                            <?= $c['is_active'] ? 'فعال' : 'غیرفعال' ?>
-                        </span>
-                    </td>
-
-                    <td>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-
-                            <button type="button" class="btn"
-                                onclick='openEditCategory(
-                                    <?= (int)$c["id"] ?>,
-                                    <?= htmlspecialchars(json_encode($c["name"], JSON_UNESCAPED_UNICODE), ENT_QUOTES, "UTF-8") ?>,
-                                    <?= htmlspecialchars(json_encode(str_starts_with(trim($c["icon"] ?? ""), "/uploads/") ? "" : ($c["icon"] ?? ""), JSON_UNESCAPED_UNICODE), ENT_QUOTES, "UTF-8") ?>,
-                                    <?= (int)$c["sort_order"] ?>,
-                                    <?= $c["parent_id"] !== null ? (int)$c["parent_id"] : 0 ?>
-                                )'
-                                style="padding:6px 12px;font-size:.72rem;background:var(--teal-100);color:var(--teal-800);">
-                                ✏️ ویرایش
+                        <div class="cat-sub-head">
+                            <h4>
+                                <?= htmlspecialchars($root['name'], ENT_QUOTES, 'UTF-8') ?>
+                                <span>(<?= count($childRows) ?> زیرمجموعه)</span>
+                            </h4>
+                            <button type="button" class="btn btn-add-sub cat-add-sub-btn"
+                                data-parent-id="<?= $rootId ?>"
+                                data-parent-name="<?= htmlspecialchars($root['name'], ENT_QUOTES, 'UTF-8') ?>"
+                                style="padding:6px 14px;font-size:.75rem;">
+                                + افزودن زیرمجموعه
                             </button>
-
-                            <form method="post" style="display:inline;">
-                                <form method="post" style="display:inline;">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="do" value="toggle">
-                                    <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                                    <button class="btn" style="padding:6px 12px;font-size:.72rem;">
-                                        <?= $c['is_active'] ? 'غیرفعال' : 'فعال' ?>
-                                    </button>
-                                </form>
-
-                                <form method="post" style="display:inline;"
-                                    onsubmit="return confirm('حذف شود؟');">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="do" value="delete">
-                                    <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                                    <button class="btn"
-                                        style="padding:6px 12px;font-size:.72rem;background:#fff0f0;color:#c62828;">
-                                        🗑
-                                    </button>
-                                </form>
                         </div>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+
+                        <?php if (empty($childRows)): ?>
+                            <div style="padding:10px 0 14px;font-size:.85rem;color:var(--admin-text-muted);">
+                                هنوز زیرمجموعه‌ای برای این دسته ثبت نشده است.
+                            </div>
+                        <?php else: ?>
+                            <div class="cat-sub-list">
+                                <?php foreach ($childRows as $ch):
+                                    $chImage = trim($ch['image_path'] ?? '');
+                                    $chIcon  = trim($ch['icon'] ?? '');
+                                    if (substr($chIcon, 0, 9) === '/uploads/') $chIcon = '🧦';
+                                    $chActive = (int)$ch['is_active'] === 1;
+                                ?>
+                                    <div class="cat-sub-item <?= $chActive ? '' : 'is-inactive' ?>">
+
+                                        <div class="cat-sub-thumb">
+                                            <?php if ($chImage !== ''): ?>
+                                                <img src="<?= htmlspecialchars($chImage, ENT_QUOTES, 'UTF-8') ?>" alt="">
+                                            <?php else: ?>
+                                                <span class="emoji"><?= htmlspecialchars($chIcon ?: '🧦', ENT_QUOTES, 'UTF-8') ?></span>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="cat-sub-info">
+                                            <div class="cat-sub-name"><?= htmlspecialchars($ch['name'], ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div class="cat-sub-meta">
+                                                <span>📦 <?= number_format((int)$ch['own_products']) ?> محصول</span>
+                                                <span>#= <?= (int)$ch['sort_order'] ?></span>
+                                            </div>
+                                        </div>
+
+                                        <div class="cat-sub-actions">
+                                            <button type="button" class="btn cat-edit-btn"
+                                                data-id="<?= (int)$ch['id'] ?>"
+                                                data-name="<?= htmlspecialchars($ch['name'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-icon="<?= htmlspecialchars($chIcon, ENT_QUOTES, 'UTF-8') ?>"
+                                                data-sort="<?= (int)$ch['sort_order'] ?>"
+                                                data-parent="<?= $rootId ?>"
+                                                title="ویرایش">✏️</button>
+
+                                            <form method="post" style="display:inline; margin:0;">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="do" value="move">
+                                                <input type="hidden" name="id" value="<?= (int)$ch['id'] ?>">
+                                                <input type="hidden" name="dir" value="up">
+                                                <button type="submit" title="انتقال به بالا" class="btn">▲</button>
+                                            </form>
+
+                                            <form method="post" style="display:inline; margin:0;">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="do" value="move">
+                                                <input type="hidden" name="id" value="<?= (int)$ch['id'] ?>">
+                                                <input type="hidden" name="dir" value="down">
+                                                <button type="submit" title="انتقال به پایین" class="btn">▼</button>
+                                            </form>
+
+                                            <form method="post" style="display:inline; margin:0;">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="do" value="toggle">
+                                                <input type="hidden" name="id" value="<?= (int)$ch['id'] ?>">
+                                                <button type="submit" title="<?= $chActive ? 'غیرفعال کردن' : 'فعال کردن' ?>" class="btn">
+                                                    <?= $chActive ? '👁️' : '🔇' ?>
+                                                </button>
+                                            </form>
+
+                                            <form method="post" style="display:inline; margin:0;"
+                                                onsubmit="return confirm('حذف «<?= htmlspecialchars($ch['name'], ENT_QUOTES, 'UTF-8') ?>»؟');">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="do" value="delete">
+                                                <input type="hidden" name="id" value="<?= (int)$ch['id'] ?>">
+                                                <button type="submit" class="btn" title="حذف">🗑</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
+        </div>
+    </div>
+
 </div>
 
-<!-- ═══ Modal ویرایش ═══ -->
-<div id="editCategoryModal" class="admin-modal-overlay" style="display:none;">
-    <div class="admin-modal">
+<!-- ═══════════════════════════════════════════════════════════
+     مودال افزودن زیرمجموعه
+     ═══════════════════════════════════════════════════════════ -->
+<div id="addSubModal" class="cat-modal-overlay">
+    <div class="cat-modal">
 
-        <div class="admin-modal-head">
-            <h3>ویرایش دسته‌بندی</h3>
-            <button type="button" class="admin-modal-close" onclick="closeEditCategory()" aria-label="بستن">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div class="cat-modal-head">
+            <h3 id="addSubTitle">افزودن زیرمجموعه</h3>
+            <button type="button" class="cat-modal-close" id="addSubClose" aria-label="بستن">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
             </button>
         </div>
 
-        <form method="post" enctype="multipart/form-data" class="admin-modal-body">
-            <?= csrf_field() ?>
-            <input type="hidden" name="do" value="edit">
-            <input type="hidden" name="id" id="edit_category_id">
+        <div class="cat-modal-body">
 
-            <div class="admin-modal-field">
-                <label>نام دسته‌بندی</label>
-                <input type="text" name="name" id="edit_category_name" required>
-            </div>
+            <form method="post" enctype="multipart/form-data" id="addSubForm">
+                <?= csrf_field() ?>
+                <input type="hidden" name="do" value="add">
+                <input type="hidden" name="parent_id" id="addSubParentId" value="0">
 
-            <div class="admin-modal-field">
-                <label>دسته والد</label>
-                <select name="parent_id" id="edit_category_parent">
-                    <option value="0">— بدون والد (دسته اصلی) —</option>
-                    <?php foreach ($allCategories as $c): ?>
-                        <?php if ($c['parent_id'] === null): ?>
-                            <option value="<?= (int)$c['id'] ?>">
-                                <?= htmlspecialchars($c['name']) ?>
-                            </option>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="admin-modal-row">
-                <div class="admin-modal-field">
-                    <label>ایموجی</label>
-                    <input type="text" name="icon" id="edit_category_icon" placeholder="🧦">
+                <div class="cat-modal-field">
+                    <label>نام زیرمجموعه <span style="color:var(--admin-danger);">*</span></label>
+                    <input type="text" name="name" required placeholder="مثلاً: جوراب ساق‌بلند">
                 </div>
-                <div class="admin-modal-field">
-                    <label>ترتیب</label>
-                    <input type="number" name="sort_order" id="edit_category_sort" min="0">
+
+                <div class="cat-modal-row">
+                    <div class="cat-modal-field">
+                        <label>ایموجی</label>
+                        <input type="text" name="icon" placeholder="🧦" style="text-align:center;font-size:1.1rem;">
+                    </div>
+                    <div class="cat-modal-field">
+                        <label>ترتیب</label>
+                        <input type="number" name="sort_order" value="99" min="0" style="text-align:center;">
+                    </div>
                 </div>
-            </div>
 
-            <div class="admin-modal-field">
-                <label>تصویر جدید</label>
-                <label class="admin-file">
-                    <input type="file" name="icon_img" accept="image/jpeg,image/png,image/webp"
-                        onchange="updateFileName(this)">
-                    <span class="admin-file-btn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
-                        انتخاب تصویر
-                    </span>
-                    <span class="admin-file-name" data-placeholder="تصویری انتخاب نشده">
-                        تصویری انتخاب نشده
-                    </span>
-                </label>
-                <small class="admin-modal-hint">اگر عکس جدید انتخاب کنید جایگزین تصویر فعلی می‌شود.</small>
-            </div>
+                <div class="cat-modal-field">
+                    <label>تصویر (اختیاری)</label>
+                    <div class="cat-modal-file">
+                        <label class="cat-file-btn" for="addSubImg">انتخاب تصویر</label>
+                        <input type="file" name="icon_img" id="addSubImg"
+                            accept="image/jpeg,image/png,image/webp" style="display:none;">
+                        <span class="cat-file-name" id="addSubImgName">تصویری انتخاب نشده</span>
+                    </div>
+                </div>
 
-            <div class="admin-modal-actions">
-                <button type="button" class="btn" onclick="closeEditCategory()">انصراف</button>
-                <button type="submit" class="btn btn-orange">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-                        <polyline points="17 21 17 13 7 13 7 21" />
-                        <polyline points="7 3 7 8 15 8" />
-                    </svg>
-                    ذخیره تغییرات
-                </button>
-            </div>
-        </form>
+                <div class="cat-modal-actions">
+                    <button type="button" class="btn" id="addSubCancel">انصراف</button>
+                    <button type="submit" class="btn btn-orange">+ افزودن زیرمجموعه</button>
+                </div>
+            </form>
 
+            <!-- لیست زیرمجموعه‌های موجود این والد -->
+            <div class="cat-modal-existing">
+                <h4>زیرمجموعه‌های موجود این دسته:</h4>
+                <div class="cat-modal-existing-list" id="addSubExisting"></div>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     مودال ویرایش
+     ═══════════════════════════════════════════════════════════ -->
+<div id="editCategoryModal" class="cat-modal-overlay">
+    <div class="cat-modal">
+
+        <div class="cat-modal-head">
+            <h3>ویرایش دسته‌بندی</h3>
+            <button type="button" class="cat-modal-close" id="editCatClose" aria-label="بستن">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="cat-modal-body">
+            <form method="post" enctype="multipart/form-data" id="editCategoryForm">
+                <?= csrf_field() ?>
+                <input type="hidden" name="do" value="edit">
+                <input type="hidden" name="id" id="edit_category_id">
+
+                <div class="cat-modal-field">
+                    <label>نام دسته‌بندی <span style="color:var(--admin-danger);">*</span></label>
+                    <input type="text" name="name" id="edit_category_name" required>
+                </div>
+
+                <div class="cat-modal-field" id="edit_parent_field">
+                    <label>دستهٔ اصلی والد</label>
+                    <select name="parent_id" id="edit_category_parent">
+                        <option value="0">— این یک زیرمجموعهٔ مستقل است —</option>
+                        <?php foreach ($rootCategories as $c): ?>
+                            <option value="<?= (int)$c['id'] ?>">
+                                <?= htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8') ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small style="display:block;font-size:.72rem;color:var(--admin-text-muted);margin-top:5px;">
+                        اگر این دسته خودش «دستهٔ اصلی» است، این گزینه را روی «مستقل» بگذارید.
+                    </small>
+                </div>
+
+                <div class="cat-modal-row">
+                    <div class="cat-modal-field">
+                        <label>ایموجی</label>
+                        <input type="text" name="icon" id="edit_category_icon" placeholder="🧦" style="text-align:center;font-size:1.1rem;">
+                    </div>
+                    <div class="cat-modal-field">
+                        <label>ترتیب</label>
+                        <input type="number" name="sort_order" id="edit_category_sort" min="0" style="text-align:center;">
+                    </div>
+                </div>
+
+                <div class="cat-modal-field">
+                    <label>تصویر جدید (اختیاری)</label>
+                    <div class="cat-modal-file">
+                        <label class="cat-file-btn" for="edit_category_img">انتخاب تصویر</label>
+                        <input type="file" name="icon_img" id="edit_category_img"
+                            accept="image/jpeg,image/png,image/webp" style="display:none;">
+                        <span class="cat-file-name" id="edit_category_img_name">تصویری انتخاب نشده</span>
+                    </div>
+                    <small style="display:block;font-size:.72rem;color:var(--admin-text-muted);margin-top:5px;">
+                        اگر تصویر جدید انتخاب کنید، جایگزین تصویر فعلی می‌شود.
+                    </small>
+                </div>
+
+                <div class="cat-modal-actions">
+                    <button type="button" class="btn" id="editCatCancel">انصراف</button>
+                    <button type="submit" class="btn btn-orange">💾 ذخیره تغییرات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     دادهٔ زیرمجموعه‌ها برای JS
+     ═══════════════════════════════════════════════════════════ -->
 <script>
-    function openEditCategory(id, name, icon, sortOrder, parentId) {
-        document.getElementById('edit_category_id').value = id;
-        document.getElementById('edit_category_name').value = name;
-        document.getElementById('edit_category_icon').value = icon || '';
-        document.getElementById('edit_category_sort').value = sortOrder ?? 99;
-        document.getElementById('edit_category_parent').value = parentId || 0;
+    (function() {
+        'use strict';
 
-        document.getElementById('editCategoryModal').style.display = 'flex';
-    }
+        /* نقشهٔ parentId => [زیرمجموعه‌ها] — برای نمایش در مودال افزودن */
+        var childrenByParent = <?= json_encode(
+                                    array_map(function ($kids) {
+                                        return array_map(function ($k) {
+                                            return [
+                                                'id'     => (int)$k['id'],
+                                                'name'   => $k['name'],
+                                                'icon'   => (substr((string)($k['icon'] ?? ''), 0, 9) === '/uploads/') ? '🧦' : ((string)($k['icon'] ?? '')),
+                                                'image'  => (string)($k['image_path'] ?? ''),
+                                                'count'  => (int)$k['own_products'],
+                                                'active' => (int)$k['is_active'] === 1,
+                                            ];
+                                        }, $kids);
+                                    }, $childrenByParent),
+                                    JSON_UNESCAPED_UNICODE
+                                ) ?>;
 
-    function closeEditCategory() {
-        document.getElementById('editCategoryModal').style.display = 'none';
-    }
+        /* ─── عناصر مشترک ─── */
+        function openModal(id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.add('is-open');
+        }
 
-    document.getElementById('editCategoryModal')
-        .addEventListener('click', function(event) {
-            if (event.target === this) closeEditCategory();
+        function closeModal(id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.remove('is-open');
+        }
+
+        /* ─── مودال افزودن زیرمجموعه ─── */
+        var addSubBtns = document.querySelectorAll('.cat-add-sub-btn');
+        addSubBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var pid = parseInt(btn.dataset.parentId, 10);
+                var pname = btn.dataset.parentName || '';
+
+                document.getElementById('addSubParentId').value = pid;
+                document.getElementById('addSubTitle').textContent = 'افزودن زیرمجموعه به «' + pname + '»';
+
+                /* پاک کردن فرم */
+                var form = document.getElementById('addSubForm');
+                form.reset();
+                document.getElementById('addSubParentId').value = pid;
+                document.getElementById('addSubImgName').textContent = 'تصویری انتخاب نشده';
+
+                /* پر کردن لیست زیرمجموعه‌های موجود این والد */
+                var list = document.getElementById('addSubExisting');
+                var kids = childrenByParent[pid] || [];
+                if (!kids.length) {
+                    list.innerHTML = '<div class="cat-modal-existing-empty">هنوز زیرمجموعه‌ای ثبت نشده است.</div>';
+                } else {
+                    list.innerHTML = kids.map(function(k) {
+                        var thumb = k.image ?
+                            '<img src="' + k.image + '" alt="" style="width:24px;height:24px;object-fit:cover;border-radius:6px;border:1px solid var(--admin-border);">' :
+                            '<span class="emoji">' + (k.icon || '🧦') + '</span>';
+                        return '<div class="cat-modal-existing-item ' + (k.active ? '' : 'is-inactive') + '">' +
+                            thumb +
+                            '<b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + k.name + '</b>' +
+                            '<span style="color:var(--admin-text-muted);font-size:.72rem;">' + k.count + ' محصول</span>' +
+                            '</div>';
+                    }).join('');
+                }
+
+                openModal('addSubModal');
+            });
         });
 
-    function updateFileName(input) {
-        var label = input.closest('.admin-file');
-        var nameEl = label ? label.querySelector('.admin-file-name') : null;
-        if (!nameEl) return;
+        document.getElementById('addSubClose').addEventListener('click', function() {
+            closeModal('addSubModal');
+        });
+        document.getElementById('addSubCancel').addEventListener('click', function() {
+            closeModal('addSubModal');
+        });
+        document.getElementById('addSubModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal('addSubModal');
+        });
 
-        if (input.files && input.files.length > 0) {
-            nameEl.textContent = input.files[0].name;
-            nameEl.classList.add('is-selected');
-        } else {
-            nameEl.textContent = nameEl.dataset.placeholder || 'تصویری انتخاب نشده';
-            nameEl.classList.remove('is-selected');
-        }
-    }
+        /* نمایش نام فایل انتخاب‌شده */
+        var addSubImg = document.getElementById('addSubImg');
+        addSubImg.addEventListener('change', function() {
+            var name = (addSubImg.files && addSubImg.files.length) ?
+                addSubImg.files[0].name :
+                'تصویری انتخاب نشده';
+            document.getElementById('addSubImgName').textContent = name;
+        });
+
+        /* ─── مودال ویرایش ─── */
+        var editBtns = document.querySelectorAll('.cat-edit-btn');
+        editBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var id = btn.dataset.id;
+                var name = btn.dataset.name || '';
+                var icon = btn.dataset.icon || '';
+                var sort = btn.dataset.sort || 99;
+                var parent = btn.dataset.parent || 0;
+
+                document.getElementById('edit_category_id').value = id;
+                document.getElementById('edit_category_name').value = name;
+                document.getElementById('edit_category_icon').value = icon;
+                document.getElementById('edit_category_sort').value = sort;
+                document.getElementById('edit_category_parent').value = parent;
+
+                /* اگر والد = 0 یعنی این یک دستهٔ اصلی است → فیلد والد را مخفی کن */
+                var parentField = document.getElementById('edit_parent_field');
+                parentField.style.display = (parseInt(parent, 10) === 0) ? 'none' : 'block';
+
+                /* پاک کردن انتخاب فایل قبلی */
+                document.getElementById('edit_category_img_name').textContent = 'تصویری انتخاب نشده';
+
+                openModal('editCategoryModal');
+            });
+        });
+
+        document.getElementById('editCatClose').addEventListener('click', function() {
+            closeModal('editCategoryModal');
+        });
+        document.getElementById('editCatCancel').addEventListener('click', function() {
+            closeModal('editCategoryModal');
+        });
+        document.getElementById('editCategoryModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal('editCategoryModal');
+        });
+
+        /* نمایش نام فایل در مودال ویرایش */
+        var editImg = document.getElementById('edit_category_img');
+        editImg.addEventListener('change', function() {
+            var name = (editImg.files && editImg.files.length) ?
+                editImg.files[0].name :
+                'تصویری انتخاب نشده';
+            document.getElementById('edit_category_img_name').textContent = name;
+        });
+
+        /* ESC برای بستن مودال‌ها */
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal('addSubModal');
+                closeModal('editCategoryModal');
+            }
+        });
+    })();
 </script>
 
 <?php

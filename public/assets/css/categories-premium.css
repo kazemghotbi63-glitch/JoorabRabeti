@@ -1,12 +1,12 @@
-﻿/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    Categories Premium Section — رابطی
    ═══════════════════════════════════════════════════════ */
 
 :root {
-  --rp-teal: #a35c3c;              /* تراکوتا */
+  --rp-teal: #a35c3c; /* تراکوتا */
   --rp-teal-700: #7a3f26;
   --rp-teal-100: #f9ece3;
-  --rp-orange: #d67d3f;            /* نارنجی گرم */
+  --rp-orange: #d67d3f; /* نارنجی گرم */
   --rp-cream: #f8f3ec;
   --rp-ivory: #fffcf8;
   --rp-ink: #4a2c1a;
@@ -88,20 +88,20 @@
 }
 
 .rp-parent {
-    position: relative;
-    border-radius: var(--rp-radius-lg);
-    overflow: hidden;
-    cursor: pointer;
-    background: #fff;
-    box-shadow: var(--rp-shadow-sm);
-    transition:
-        transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1),
-        box-shadow 0.35s ease;
-    aspect-ratio: 1 / 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    isolation: isolate;
+  position: relative;
+  border-radius: var(--rp-radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  background: #fff;
+  box-shadow: var(--rp-shadow-sm);
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.35s ease;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  isolation: isolate;
 }
 
 .rp-parent:hover {
@@ -110,19 +110,19 @@
 }
 
 .rp-parent-img {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
 }
 
 .rp-parent-img img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    display: block;
-    transition: transform 0.4s ease;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: transform 0.4s ease;
 }
 
 .rp-parent:hover .rp-parent-img img {
@@ -136,17 +136,17 @@
 }
 
 .rp-parent-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background: linear-gradient(
-        to top,
-        rgba(74, 44, 26, 0.92) 0%,        /* ⭐ قهوه‌ای تیره */
-        rgba(74, 44, 26, 0.55) 35%,
-        rgba(74, 44, 26, 0.05) 70%,
-        transparent 100%
-    );
-    pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(74, 44, 26, 0.92) 0%,
+    /* ⭐ قهوه‌ای تیره */ rgba(74, 44, 26, 0.55) 35%,
+    rgba(74, 44, 26, 0.05) 70%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 .rp-parent-body {
   position: relative;
@@ -451,10 +451,10 @@
     margin-bottom: 20px;
   }
 
-.rp-parent {
+  .rp-parent {
     border-radius: 16px;
     aspect-ratio: 1 / 1;
-}
+  }
 
   .rp-parent-body {
     padding: 10px 8px;
@@ -586,10 +586,10 @@
     gap: 6px;
   }
 
-.rp-parent {
+  .rp-parent {
     border-radius: 14px;
     aspect-ratio: 1 / 1;
-}
+  }
 
   .rp-parent-title {
     font-size: 0.82rem;
@@ -653,4 +653,75 @@
 .r-cats-premium::before,
 .r-cats-premium::after {
   display: none !important;
+}
+/* ── هدر بخش دسته‌بندی ── */
+.rp-head {
+  text-align: center;
+  margin-bottom: 32px;
+  font-family: Vazirmatn, Tahoma, sans-serif;
+}
+
+.rp-eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #b8860b;
+  background: rgba(184, 134, 11, 0.08);
+  border: 1px solid rgba(184, 134, 11, 0.25);
+  border-radius: 999px;
+  padding: 6px 16px;
+  margin-bottom: 14px;
+  letter-spacing: 0.2px;
+}
+
+.rp-title {
+  font-size: clamp(26px, 5vw, 38px);
+  font-weight: 800;
+  color: #1a1a2e;
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.rp-subtitle {
+  font-size: clamp(16px, 3vw, 20px);
+  font-weight: 500;
+  color: #b8860b;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.rp-desc {
+  font-size: 14px;
+  font-weight: 400;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.8;
+}
+/* ── سرتیر دسته‌بندی ── */
+.rp-cats-head {
+  text-align: right;
+  margin: 28px 0 18px;
+  font-family: Vazirmatn, Tahoma, sans-serif;
+}
+
+.rp-cats-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+  line-height: 1.4;
+  position: relative;
+  padding-right: 14px;
+}
+
+.rp-cats-title::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: #b8860b;
 }

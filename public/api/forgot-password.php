@@ -50,6 +50,10 @@ if ($step === 'request') {
     if (!in_array($channel, ['sms', 'email'], true)) {
         jsonOut(['ok' => false, 'error' => 'روش بازیابی نامعتبر است.'], 422);
     }
+    /* ارسال ایمیل پیاده‌سازی نشده؛ بدون این بررسی کد ساخته می‌شد ولی هیچ‌وقت به کاربر نمی‌رسید */
+    if ($channel === 'email') {
+        jsonOut(['ok' => false, 'error' => 'بازیابی با ایمیل فعلاً در دسترس نیست. لطفاً از پیامک استفاده کنید.'], 422);
+    }
 
     if ($channel === 'sms') {
         $target = strtr($target, [

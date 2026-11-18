@@ -33,7 +33,25 @@ $f     = (string)($_GET['f'] ?? '');
 $w     = (int)($_GET['w'] ?? 0);
 $h     = (int)($_GET['h'] ?? 0);   // اختیاری: اگر داده شود، برش مرکزی دقیق w×h
 $q     = min(95, max(40, (int)($_GET['q'] ?? 82)));
-$debug = isset($_GET['debug']);
+$debug = false;
+if (isset($_GET['debug'])) {
+    foreach ([__DIR__ . '/../sock-b2b/config/bootstrap.php', __DIR__ . '/../config/bootstrap.php'] as $__b) {
+        if (is_file($__b)) {
+            require_once $__b;
+            break;
+        }
+    }
+    unset($__b);
+    if (defined('ROOT_PATH') && is_file(ROOT_PATH . '/config/auth.php')) {
+        require_once ROOT_PATH . '/config/auth.php';
+        $debug = is_admin_logged_in();
+    }
+}
+
+/* اندازه و کیفیت به چند مقدار ثابت گرد می‌شوند تا کش با پارامترهای دلخواه پر نشود */
+$w = $w > 0 ? min($MAX_DIM, (int)ceil($w / 20) * 20) : 0;
+$h = $h > 0 ? min($MAX_DIM, (int)ceil($h / 20) * 20) : 0;
+$q = $q >= 86 ? 90 : ($q >= 76 ? 82 : ($q >= 65 ? 70 : 60));
 
 $f = str_replace('\\', '/', $f);
 $f = ltrim($f, '/');
@@ -69,6 +87,9 @@ function r6_log(string $reason, string $detail = ''): void
 function r6_orig_path(string $f, string $uploadRoot, string $siteRoot): ?string
 {
     if ($f === '' || strpos($f, '..') !== false) {
+        return null;
+    }
+    if (preg_match('#(^|[/\\\\])(receipts|custom-orders)([/\\\\]|$)#i', $f)) {
         return null;
     }
     $candidates = [

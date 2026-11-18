@@ -158,11 +158,7 @@ function rate_limit_exceeded(string $bucket, string $key, int $max, int $windowS
     } catch (Throwable $e) {
         error_log('RATE_LIMIT CHECK FAILED: ' . $e->getMessage());
 
-        /* فقط برای bucket های حساس fail-closed */
-        if (str_starts_with($bucket, 'login_') || str_starts_with($bucket, 'reset_')) {
-            return true;
-        }
-        return false;
+        return true;
     }
 }
 
@@ -253,6 +249,7 @@ function attempt_admin_login(string $mobile, string $password): bool
     session_regenerate_id(true);
 
     $_SESSION['admin_id']   = (int)$user['id'];
+    $_SESSION['pw_fp']      = session_password_fingerprint((string)$user['password_hash']);
     $_SESSION['admin_name'] = $user['full_name'] ?? 'مدیر';
 
     unset(
@@ -335,6 +332,7 @@ function attempt_customer_login(
     session_regenerate_id(true);
 
     $_SESSION['customer_id']   = (int)$user['id'];
+    $_SESSION['pw_fp']         = session_password_fingerprint((string)$user['password_hash']);
     $_SESSION['customer_name'] = $user['full_name'];
 
     unset(
@@ -368,8 +366,10 @@ function register_customer(
     string $companyName,
     string $mobile,
     string $password,
-    string $nationalCode = ''
+    string $nationalCode = '',
+    string $customerType = 'individual'
 ): array {
+    $userType = $customerType === 'company' ? 'legal' : 'real';
 
     $pdo = db();
 
@@ -442,10 +442,10 @@ function register_customer(
         ];
     }
 
-    if (strlen($password) < 8) {
+    if (strlen($password) < 4) {
         return [
             'ok' => false,
-            'error' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.'
+            'error' => 'رمز عبور باید حداقل ۴ کاراکتر باشد.'
         ];
     }
 
@@ -496,11 +496,13 @@ function register_customer(
                     mobile,
                     password_hash,
                     national_code,
+                    customer_type,
+                    user_type,
                     role,
                     is_active
                 )
             VALUES
-                (?, ?, ?, ?, ?, 'customer', 1)
+                (?, ?, ?, ?, ?, ?, ?, 'customer', 1)
         ");
 
         $stmt->execute([
@@ -509,6 +511,8 @@ function register_customer(
             $mobile,
             $passwordHash,
             $nationalCode,
+            $userType,
+            $userType,
         ]);
 
         $customerId = (int)$pdo->lastInsertId();
@@ -559,35 +563,12 @@ function register_customer(
             $pdo->rollBack();
         }
 
-        /* fallback — بدون شرکت (اگر جدول companies آماده نبود) */
-        $stmt = $pdo->prepare("
-            INSERT INTO users
-                (
-                    full_name,
-                    mobile,
-                    password_hash,
-                    national_code,
-                    role,
-                    is_active
-                )
-            VALUES
-                (?, ?, ?, ?, 'customer', 1)
-        ");
+        error_log('[register_customer] ' . $e->getMessage());
 
-        try {
-            $stmt->execute([
-                $fullName,
-                $mobile,
-                $passwordHash,
-                $nationalCode,
-            ]);
-            $customerId = (int)$pdo->lastInsertId();
-        } catch (Throwable $e2) {
-            return [
-                'ok' => false,
-                'error' => 'خطا در ثبت اطلاعات. دوباره تلاش کنید.'
-            ];
-        }
+        return [
+            'ok' => false,
+            'error' => 'خطا در ثبت اطلاعات. دوباره تلاش کنید.'
+        ];
     }
 
     return [
@@ -632,6 +613,20 @@ function customer_name(): string
     return $_SESSION['customer_name'] ?? 'کاربر';
 }
 
+
+/** توکن مخصوص لینک خروج؛ از CSRF مشتق می‌شود تا خود توکن CSRF در URL نیاید. */
+function logout_token(): string
+{
+    return hash_hmac('sha256', 'logout', csrf_token());
+}
+
+function logout_token_valid(): bool
+{
+    if (isset($_POST['csrf_token'])) {
+        return hash_equals(csrf_token(), (string)$_POST['csrf_token']);
+    }
+    return hash_equals(logout_token(), (string)($_GET['t'] ?? ''));
+}
 
 /* ═══════════════════════════════════════════════════════════════
    خروج کامل
@@ -709,8 +704,8 @@ function register_user_full(array $d): array
     if (!preg_match('/^09\d{9}$/', $mobile)) {
         return ['ok' => false, 'error' => 'شماره موبایل صحیح نیست.'];
     }
-    if (strlen($d['password'] ?? '') < 8) {
-        return ['ok' => false, 'error' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.'];
+    if (strlen($d['password'] ?? '') < 4) {
+        return ['ok' => false, 'error' => 'رمز عبور باید حداقل ۴ کاراکتر باشد.'];
     }
     if (($d['password'] ?? '') !== ($d['password2'] ?? '')) {
         return ['ok' => false, 'error' => 'تکرار رمز عبور صحیح نیست.'];
@@ -810,3 +805,43 @@ function register_user_full(array $d): array
         throw $e;
     }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   ابطال نشست بعد از تغییر رمز یا غیرفعال‌شدن حساب
+═══════════════════════════════════════════════════════════════ */
+
+function session_password_fingerprint(string $passwordHash): string
+{
+    return substr(hash('sha256', $passwordHash), 0, 32);
+}
+
+function enforce_session_validity(): void
+{
+    $uid = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+    if ($uid <= 0 || empty($_SESSION['pw_fp']) || !function_exists('db')) {
+        return;
+    }
+    if ((int)($_SESSION['pw_checked_at'] ?? 0) > time() - 60) {
+        return;
+    }
+    try {
+        $stmt = db()->prepare('SELECT password_hash, is_active FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$uid]);
+        $row = $stmt->fetch();
+    } catch (Throwable $e) {
+        error_log('[session-validity] ' . $e->getMessage());
+        return;
+    }
+    if (
+        !$row
+        || !(int)$row['is_active']
+        || !hash_equals((string)$_SESSION['pw_fp'], session_password_fingerprint((string)$row['password_hash']))
+    ) {
+        logout_session();
+        return;
+    }
+    $_SESSION['pw_checked_at'] = time();
+}
+
+enforce_session_validity();

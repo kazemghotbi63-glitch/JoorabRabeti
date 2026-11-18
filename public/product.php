@@ -111,6 +111,21 @@ $moq       = max(1, (int)$product['base_moq']);
 $unitLabel = unit_label($product['unit_code'] ?? 'جفتی');
 
 
+
+/* ⭐ بررسی وجود محصول در سبد کاربر */
+$cartItemQty = 0;
+if (is_customer_logged_in()) {
+    $uid = (int)$_SESSION['customer_id'];
+    $stmt = db()->prepare("
+        SELECT ci.qty FROM cart_items ci
+        JOIN carts c ON c.id = ci.cart_id
+        WHERE c.user_id = ? AND c.status = 'active' AND ci.product_id = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$uid, $productId]);
+    $cartItemQty = (int)$stmt->fetchColumn();
+}
+
 /* ═══════════════ قیمت‌ها (wholesale فقط) ═══════════════ */
 /* ═══════════════ قیمت‌ها — از PricingService v2 ═══════════════ */
 
@@ -291,7 +306,7 @@ $jsonLd = [
 
 ob_start();
 ?>
-<link rel="stylesheet" href="/assets/css/product-premium.css">
+<link rel="stylesheet" href="/assets/css/product-premium.css?v=1">
 
 <!-- ═══ Breadcrumb ═══ -->
 
@@ -512,25 +527,46 @@ ob_start();
         <?php endif; ?>
 
         <!-- ─── سفارش (تعداد + دکمه‌ها) ─── -->
+        <!-- ─── سفارش ─── -->
         <?php if ($inStock && $basePrice !== null): ?>
-            <div class="pd-order-block">
-                <div class="pd-qty-row">
-                    <label class="pd-qty-label">تعداد:</label>
-                    <div class="pd-stepper" data-min="<?= $moq ?>" data-max="<?= $stock ?>">
-                        <button type="button" class="pd-step pd-minus" aria-label="کمتر">−</button>
-                        <input type="text" inputmode="numeric" class="pd-qty-input" value="<?= $moq ?>">
-                        <button type="button" class="pd-step pd-plus" aria-label="بیشتر">+</button>
+            <div class="pd-order-block" id="pdOrderBlock" data-product-id="<?= $productId ?>">
+
+                <!-- حالت اولیه: انتخاب تعداد -->
+                <div id="pdAddState" style="<?= $cartItemQty > 0 ? 'display:none;' : '' ?>">
+                    <div class="pd-qty-row">
+                        <label class="pd-qty-label">تعداد:</label>
+                        <div class="pd-stepper" data-min="<?= $moq ?>" data-max="<?= $stock ?>">
+                            <button type="button" class="pd-step pd-minus" aria-label="کمتر">−</button>
+                            <input type="text" inputmode="numeric" class="pd-qty-input" value="<?= $moq ?>">
+                            <button type="button" class="pd-step pd-plus" aria-label="بیشتر">+</button>
+                        </div>
+                        <span class="pd-qty-hint">حداقل <?= number_format($moq) ?> جفت</span>
                     </div>
-                    <span class="pd-qty-hint"> حداقل سفارش <?= $numFa($moq) ?> <?= htmlspecialchars($unitLabel) ?></span>
                 </div>
 
+                <!-- حالت بعد از افزودن: تعداد موجود در سبد -->
+                <div id="pdCartState" style="<?= $cartItemQty > 0 ? '' : 'display:none;' ?>">
+                    <div class="pd-qty-row">
+                        <label class="pd-qty-label">در سبد شما:</label>
+                        <div class="pd-stepper pd-stepper-cart" data-min="1" data-max="<?= $stock ?>" data-product-id="<?= $productId ?>">
+                            <button type="button" class="pd-step pd-minus-cart" aria-label="کمتر">−</button>
+                            <button type="button" class="pd-step pd-trash-btn" id="pdTrashBtn" style="display:none;" aria-label="حذف از سبد" title="حذف از سبد">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 10v6m4-6v6" />
+                                </svg>
+                            </button>
+                            <input type="text" inputmode="numeric" class="pd-qty-input pd-qty-input-cart" value="<?= $cartItemQty ?: 1 ?>" readonly>
+                            <button type="button" class="pd-step pd-plus-cart" aria-label="بیشتر">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- دکمه افزودن فقط تا قبل از ورود محصول به سبد نمایش داده می‌شود؛ سفارش فوری همیشه باقی می‌ماند -->
                 <div class="pd-actions-row">
-                    <button type="button" class="pd-btn pd-btn-cart" data-product-id="<?= $productId ?>" data-action="cart">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="9" cy="20" r="1.5" />
-                            <circle cx="18" cy="20" r="1.5" />
-                            <path d="M3 3h2l2.4 12.4A2 2 0 009.4 17H18a2 2 0 002-1.6L21.5 8H7" />
-                        </svg>
+                    <button type="button" class="pd-btn pd-btn-cart" id="pdAddCartBtn"
+                        data-product-id="<?= $productId ?>" data-action="cart"
+                        style="<?= $cartItemQty > 0 ? 'display:none;' : '' ?>">
+                        <svg ...>...</svg>
                         <span>افزودن به سبد</span>
                     </button>
                     <button type="button" class="pd-btn pd-btn-buy" data-product-id="<?= $productId ?>" data-action="buy">
@@ -542,19 +578,19 @@ ob_start();
                 </div>
 
                 <p class="pd-hint">
-                    <span class="pd-hint-icon">ⓘ</span>
-                    پرداخت مستقیم، بدون سبد خرید
+                    <b>سفارش فوری</b> = یک کلیک تا پرداخت — سبد رو دور می‌زنه و مستقیم می‌ره به تکمیل سفارش.
                 </p>
             </div>
+
         <?php elseif (!$inStock): ?>
             <div class="pd-out-block">
                 <p>این محصول فعلاً ناموجود است.</p>
-                <a href="/custom-order?ref=<?= $productId ?>" class="pd-btn pd-btn-outline">درخواست تولید اختصاصی ←</a>
+                <a href="/custom-order" class="pd-btn pd-btn-outline">درخواست تولید اختصاصی ←</a>
             </div>
         <?php else: ?>
             <div class="pd-out-block">
                 <p>قیمت این محصول به‌زودی اعلام می‌شود.</p>
-                <a href="/custom-order?ref=<?= $productId ?>" class="pd-btn pd-btn-outline">استعلام قیمت ←</a>
+                <a href="/custom-order" class="pd-btn pd-btn-outline">استعلام قیمت ←</a>
             </div>
         <?php endif; ?>
 
@@ -730,165 +766,288 @@ ob_start();
     (function() {
         'use strict';
 
-        /* ═══════════ Stepper ═══════════ */
-        var stepper = document.querySelector('.pd-stepper');
+        var orderBlock = document.getElementById('pdOrderBlock');
+        if (!orderBlock) return;
 
-        if (stepper) {
+        var productId = orderBlock.dataset.productId;
+        var addState = document.getElementById('pdAddState');
+        var cartState = document.getElementById('pdCartState');
+        var addButton = document.getElementById('pdAddCartBtn');
+        var buyButton = orderBlock.querySelector('.pd-btn-buy');
+        var cartStepper = orderBlock.querySelector('.pd-stepper-cart');
+        var cartQtyInput = orderBlock.querySelector('.pd-qty-input-cart');
+        var cartMinus = orderBlock.querySelector('.pd-minus-cart');
+        var cartPlus = orderBlock.querySelector('.pd-plus-cart');
+        var trashButton = document.getElementById('pdTrashBtn');
+        var stockMax = cartStepper ? (parseInt(cartStepper.dataset.max, 10) || 999999) : 999999;
+
+        function faToEn(value) {
+            return String(value).replace(/[۰-۹]/g, function(d) {
+                return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);
+            }).replace(/[٠-٩]/g, function(d) {
+                return '٠١٢٣٤٥٦٧٨٩'.indexOf(d);
+            });
+        }
+
+        function enToFa(value) {
+            return String(value).replace(/\d/g, function(d) {
+                return '۰۱۲۳۴۵۶۷۸۹' [d];
+            });
+        }
+
+        function getQty() {
+            var stepper = orderBlock.querySelector('#pdAddState .pd-stepper');
+            if (!stepper) return 1;
             var input = stepper.querySelector('.pd-qty-input');
             var min = parseInt(stepper.dataset.min, 10) || 1;
-            var max = parseInt(stepper.dataset.max, 10) || 999999;
+            var value = parseInt(faToEn(input ? input.value : min).replace(/[^\d]/g, ''), 10) || min;
+            return Math.max(min, Math.min(stockMax, value));
+        }
 
-            function faToEn(s) {
-                return String(s).replace(/[۰-۹]/g, function(d) {
-                    return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);
-                });
-            }
+        function currentCartQty() {
+            return parseInt(faToEn(cartQtyInput ? cartQtyInput.value : '1'), 10) || 1;
+        }
 
-            function enToFa(s) {
-                return String(s).replace(/\d/g, function(d) {
-                    return '۰۱۲۳۴۵۶۷۸۹' [d];
-                });
-            }
+        function showCartState(qty) {
+            qty = Math.max(1, Math.min(stockMax, parseInt(qty, 10) || 1));
+            if (cartQtyInput) cartQtyInput.value = enToFa(qty);
+            if (addState) addState.style.display = 'none';
+            if (cartState) cartState.style.display = '';
+            if (addButton) addButton.style.display = 'none';
+            syncCartControls(qty);
+        }
 
-            function readQty() {
-                var v = faToEn(input.value).replace(/[^\d]/g, '');
-                return parseInt(v, 10) || min;
-            }
+        function showAddState() {
+            if (cartState) cartState.style.display = 'none';
+            if (addState) addState.style.display = '';
+            if (addButton) addButton.style.display = '';
+        }
 
-            function writeQty(v) {
-                v = Math.max(min, Math.min(max, parseInt(v, 10) || min));
-                input.value = enToFa(v);
-                return v;
-            }
-
-            var plus = stepper.querySelector('.pd-plus');
-            var minus = stepper.querySelector('.pd-minus');
-
-            if (plus) plus.addEventListener('click', function() {
-                writeQty(readQty() + 1);
-            });
-
-            if (minus) minus.addEventListener('click', function() {
-                writeQty(readQty() - 1);
-            });
-
-            if (input) {
-                input.addEventListener('blur', function() {
-                    writeQty(readQty());
-                });
-
-                input.addEventListener('input', function() {
-                    var v = faToEn(input.value).replace(/[^\d]/g, '');
-                    if (v) input.value = enToFa(v);
-                });
-
-                input.addEventListener('keydown', function(e) {
-                    if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        writeQty(readQty() + 1);
-                    }
-                    if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        writeQty(readQty() - 1);
-                    }
-                });
+        function syncCartControls(qty) {
+            if (cartMinus) cartMinus.style.display = qty <= 1 ? 'none' : '';
+            if (trashButton) trashButton.style.display = qty <= 1 ? '' : 'none';
+            if (cartPlus) {
+                cartPlus.disabled = qty >= stockMax;
+                cartPlus.style.opacity = qty >= stockMax ? '.45' : '';
             }
         }
 
-        /* ═══════════ Add to Cart / Buy Now ═══════════ */
-        function getQty() {
-            var s = document.querySelector('.pd-stepper');
-            if (!s) return 1;
-            var i = s.querySelector('.pd-qty-input');
-            var m = parseInt(s.dataset.min, 10) || 1;
-            var v = String(i.value).replace(/[۰-۹]/g, function(d) {
-                return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);
-            }).replace(/[^\d]/g, '');
-            return Math.max(m, parseInt(v, 10) || m);
+        function authRequired() {
+            if (typeof showToast === 'function') showToast('🔒 برای خرید، ابتدا وارد شوید یا ثبت‌نام کنید');
+            if (typeof openAuthModal === 'function') {
+                openAuthModal('register');
+            } else {
+                var modal = document.getElementById('authModalOverlay');
+                if (modal) {
+                    modal.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
         }
 
-        document.querySelectorAll('.pd-btn[data-product-id]').forEach(function(btn) {
+        function postCart(action, qty, onSuccess, button) {
+            /* مهمان: هیچ درخواستی به API ارسال نشود */
+            if (window.RABETI_AUTH !== true) {
+                authRequired();
+                return;
+            }
 
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
+            var oldHtml = button ? button.innerHTML : '';
+            if (button) {
+                button.disabled = true;
+                button.classList.add('is-loading');
+            }
 
-                var pid = btn.dataset.productId;
-                var action = btn.dataset.action;
-                var qty = getQty();
-                var span = btn.querySelector('span');
+            var fd = new FormData();
+            fd.append('action', action);
+            fd.append('product_id', productId);
+            if (qty !== null && qty !== undefined) fd.append('qty', qty);
 
-                if (!pid) return;
-
-                var oldText = span ? span.textContent : '';
-                btn.disabled = true;
-                if (span) span.textContent = 'صبر کنید...';
-
-                var fd = new FormData();
-                fd.append('product_id', pid);
-                fd.append('qty', qty);
-
-                fetch('/api/cart', {
-                        method: 'POST',
-                        body: fd,
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
-                        }
-                    })
-                    .then(function(r) {
-                        return r.text().then(function(t) {
-                            return {
-                                status: r.status,
-                                text: t
-                            };
-                        });
-                    })
-                    .then(function(res) {
-
-                        if (res.status === 401) {
-                            if (typeof showToast === 'function') showToast('🔒 برای خرید ابتدا وارد شوید');
-                            var modal = document.getElementById('authModalOverlay');
-                            if (modal) {
-                                modal.classList.add('show');
-                                document.body.style.overflow = 'hidden';
-                            }
-                            return;
-                        }
-
-                        var data;
-                        try {
-                            data = JSON.parse(res.text);
-                        } catch (err) {
-                            throw new Error('INVALID_JSON: ' + res.text.substring(0, 200));
-                        }
-
-                        if (!data.ok) {
-                            if (typeof showToast === 'function') showToast('⚠️ ' + (data.error || 'خطا'));
-                            return;
-                        }
-
-                        /* آپدیت badge */
-                        updateCartBadges(data.count);
-
-                        if (action === 'buy') {
-                            if (typeof showToast === 'function') showToast('✓ در حال انتقال به تکمیل سفارش...');
-                            setTimeout(function() {
-                                window.location.href = '/checkout-address';
-                            }, 500);
-                        } else {
-                            if (typeof showToast === 'function') showToast('✓ به سبد اضافه شد');
-                        }
-                    })
-                    .catch(function(err) {
-                        console.error('CART_ERROR:', err);
-                        if (typeof showToast === 'function') showToast('⚠️ خطا در ارتباط با سرور');
-                    })
-                    .finally(function() {
-                        btn.disabled = false;
-                        if (span) span.textContent = oldText;
+            fetch('/api/cart', {
+                    method: 'POST',
+                    body: fd,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+                    }
+                })
+                .then(function(response) {
+                    return response.text().then(function(body) {
+                        return {
+                            status: response.status,
+                            body: body
+                        };
                     });
+                })
+                .then(function(result) {
+                    if (result.status === 401) {
+                        authRequired();
+                        return;
+                    }
+                    var data;
+                    try {
+                        data = JSON.parse(result.body);
+                    } catch (error) {
+                        throw new Error('پاسخ نامعتبر سرور');
+                    }
+                    if (!data.ok) {
+                        if (typeof showToast === 'function') showToast('⚠️ ' + (data.error || 'خطا در بروزرسانی سبد'));
+                        return;
+                    }
+                    if (typeof updateCartBadges === 'function' && data.count !== undefined) updateCartBadges(data.count);
+                    if (typeof onSuccess === 'function') onSuccess(data);
+                })
+                .catch(function(error) {
+                    console.error('CART_ERROR:', error);
+                    if (typeof showToast === 'function') showToast('⚠️ خطا در ارتباط با سرور');
+                })
+                .finally(function() {
+                    if (button) {
+                        button.disabled = false;
+                        button.classList.remove('is-loading');
+                        if (button === addButton || button === buyButton) button.innerHTML = oldHtml;
+                    }
+                });
+        }
+
+        /* Stepper انتخاب تعداد پیش از افزودن */
+        var initialStepper = orderBlock.querySelector('#pdAddState .pd-stepper');
+        if (initialStepper) {
+            var initialInput = initialStepper.querySelector('.pd-qty-input');
+            var minQty = parseInt(initialStepper.dataset.min, 10) || 1;
+            var maxQty = parseInt(initialStepper.dataset.max, 10) || stockMax;
+
+            function writeInitialQty(value) {
+                value = Math.max(minQty, Math.min(maxQty, parseInt(value, 10) || minQty));
+                initialInput.value = enToFa(value);
+            }
+            initialStepper.querySelector('.pd-plus')?.addEventListener('click', function() {
+                writeInitialQty(getQty() + 1);
             });
+            initialStepper.querySelector('.pd-minus')?.addEventListener('click', function() {
+                writeInitialQty(getQty() - 1);
+            });
+            initialInput.addEventListener('blur', function() {
+                writeInitialQty(getQty());
+            });
+            initialInput.addEventListener('input', function() {
+                var value = faToEn(initialInput.value).replace(/[^\d]/g, '');
+                if (value) initialInput.value = enToFa(value);
+            });
+        }
+
+        /* افزودن به سبد */
+        if (addButton) addButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            var qty = getQty();
+            postCart('add', qty, function() {
+                showCartState(qty);
+                if (typeof showToast === 'function') showToast('✓ به سبد اضافه شد');
+            }, addButton);
+        });
+
+        /* سفارش فوری مستقل می‌ماند و همیشه قابل مشاهده است */
+        /* سفارش فوری: اگر محصول در سبد است، فقط ریدایرکت؛ وگرنه اضافه کن و برو */
+        if (buyButton) buyButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            if (window.RABETI_AUTH !== true) {
+                authRequired();
+                return;
+            }
+
+            // آیا محصول از قبل در سبد است؟
+            var isInCart = (cartState && cartState.style.display !== 'none');
+
+            // اگر در سبد است → فقط ریدایرکت
+            if (isInCart) {
+                if (typeof showToast === 'function') showToast('✓ در حال انتقال به تکمیل سفارش...');
+                setTimeout(function() {
+                    window.location.href = '/checkout-address';
+                }, 300);
+                return;
+            }
+
+            // اگر در سبد نیست → اضافه کن و برو
+            var qty = getQty();
+            var fd = new FormData();
+            fd.append('action', 'add'); // ⭐ این خط قبلاً نبود!
+            fd.append('product_id', productId);
+            fd.append('qty', qty);
+
+            buyButton.disabled = true;
+            var label = buyButton.querySelector('span');
+            var oldLabel = label ? label.textContent : '';
+            if (label) label.textContent = 'صبر کنید...';
+
+            fetch('/api/cart', {
+                method: 'POST',
+                body: fd,
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+                }
+            }).then(function(response) {
+                if (response.status === 401) {
+                    authRequired();
+                    throw new Error('AUTH_REQUIRED');
+                }
+                return response.json();
+            }).then(function(data) {
+                if (!data.ok) throw new Error(data.error || 'خطا');
+                if (typeof updateCartBadges === 'function' && data.count !== undefined) updateCartBadges(data.count);
+                if (typeof showToast === 'function') showToast('✓ در حال انتقال به تکمیل سفارش...');
+                setTimeout(function() {
+                    window.location.href = '/checkout-address';
+                }, 500);
+            }).catch(function(error) {
+                if (error.message !== 'AUTH_REQUIRED') {
+                    console.error('BUY_NOW_ERROR:', error);
+                    if (typeof showToast === 'function') showToast('⚠️ ' + (error.message || 'خطا در ارتباط با سرور'));
+                }
+            }).finally(function() {
+                buyButton.disabled = false;
+                if (label) label.textContent = oldLabel;
+            });
+        });
+
+        /* افزایش تعداد در سبد */
+        if (cartPlus) cartPlus.addEventListener('click', function() {
+            var next = currentCartQty() + 1;
+            if (next > stockMax) {
+                if (typeof showToast === 'function') showToast('حداکثر موجودی قابل سفارش است');
+                return;
+            }
+            postCart('update', next, function() {
+                if (cartQtyInput) cartQtyInput.value = enToFa(next);
+                syncCartControls(next);
+            }, cartPlus);
+        });
+
+        /* کاهش تعداد در سبد */
+        if (cartMinus) cartMinus.addEventListener('click', function() {
+            var next = currentCartQty() - 1;
+            if (next < 1) return;
+            postCart('update', next, function() {
+                if (cartQtyInput) cartQtyInput.value = enToFa(next);
+                syncCartControls(next);
+            }, cartMinus);
+        });
+
+        /* حذف کامل محصول از سبد */
+        if (trashButton) trashButton.addEventListener('click', function() {
+            postCart('remove', null, function() {
+                /* پس از حذف، تعداد انتخاب اولیه به حداقل سفارش برگردد */
+                var firstStepper = orderBlock.querySelector('#pdAddState .pd-stepper');
+                if (firstStepper) {
+                    var firstInput = firstStepper.querySelector('.pd-qty-input');
+                    var firstMin = parseInt(firstStepper.dataset.min, 10) || 1;
+                    if (firstInput) firstInput.value = enToFa(firstMin);
+                }
+                showAddState();
+                if (typeof showToast === 'function') showToast('✓ محصول از سبد حذف شد');
+            }, trashButton);
         });
 
     })();
@@ -914,6 +1073,7 @@ ob_start();
         });
     }
 </script>
+
 <?php
 $content = ob_get_clean();
 require ROOT_PATH . '/views/layouts/main.php';

@@ -1,4 +1,4 @@
-﻿USE sock_b2b;
+USE sock_b2b;
 
 UPDATE settings
 SET value = '2411'

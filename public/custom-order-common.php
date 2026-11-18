@@ -168,7 +168,7 @@ if (!function_exists('co_stages')) {
     {
         $alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
         $rand = '';
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 8; $i++) {
             $rand .= $alphabet[random_int(0, strlen($alphabet) - 1)];
         }
         return 'CR-' . str_pad((string)$id, 5, '0', STR_PAD_LEFT) . '-' . $rand;
@@ -381,7 +381,12 @@ if (!function_exists('co_stages')) {
             static fn($t) => is_int($t) && ($now - $t) < $windowSec
         ));
         if (count($_SESSION['co_lookups']) >= $max) return false;
+        $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        if (function_exists('rate_limit_exceeded') && rate_limit_exceeded('co_lookup', $ip, $max * 3, $windowSec)) {
+            return false;
+        }
         $_SESSION['co_lookups'][] = $now;
+        if (function_exists('rate_limit_hit')) rate_limit_hit('co_lookup', $ip);
         return true;
     }
 

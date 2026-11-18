@@ -16,10 +16,38 @@ unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 
-if (!is_logged_in()) {
-    header('Location: /');
+if (!is_customer_logged_in()) {
+    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
     exit;
 }
+/* ⭐ فرمت نمایش شبا: IR-XXXX-XXXX-XXXX-XXXX-XXXX-XX */
+$formatShebaDisplay = static function (string $raw): string {
+    $raw = strtoupper(preg_replace('/[^0-9A-Za-z]/', '', $raw));
+
+    // حذف IR اگر در ابتدا هست
+    if (str_starts_with($raw, 'IR')) {
+        $raw = substr($raw, 2);
+    }
+
+    if ($raw === '') {
+        return '';
+    }
+
+    // هر ۴ رقم با - جدا شود
+    $chunks = str_split($raw, 4);
+    return 'IR-' . implode('-', $chunks);
+};
+
+/* ⭐ فرمت نمایش کارت: XXXX-XXXX-XXXX-XXXX */
+$formatCardDisplay = static function (string $raw): string {
+    $raw = preg_replace('/\D/', '', $raw);
+
+    if ($raw === '') {
+        return '';
+    }
+
+    return implode('-', str_split($raw, 4));
+};
 
 $h = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 $moneyFa = static function ($amount, int $decimals = 0): string {
@@ -41,8 +69,25 @@ $moneyFa = static function ($amount, int $decimals = 0): string {
     return $formatted . ' تومان';
 };
 
+$numFa = static function ($value, int $decimals = 0): string {
+    $formatted = number_format((float)$value, $decimals, '.', ',');
+    return strtr($formatted, [
+        '0' => '۰',
+        '1' => '۱',
+        '2' => '۲',
+        '3' => '۳',
+        '4' => '۴',
+        '5' => '۵',
+        '6' => '۶',
+        '7' => '۷',
+        '8' => '۸',
+        '9' => '۹',
+        ',' => '٬',
+        '.' => '٫',
+    ]);
+};
 
-$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+$userId = (int)($_SESSION['customer_id'] ?? 0);
 $db = db();
 
 $orderNumber = trim((string)($_GET['order'] ?? ''));
@@ -100,6 +145,12 @@ $settings = [];
 foreach ($db->query("SELECT `key`,`value` FROM settings WHERE `key` LIKE 'payment_%'") as $s) {
     $settings[(string)$s['key']] = (string)$s['value'];
 }
+$shebaRaw      = (string)($settings['payment_sheba']     ?? '');
+$cardRaw       = (string)($settings['payment_card']      ?? '');
+$cardName      = (string)($settings['payment_card_name'] ?? '');
+
+$shebaDisplay  = $formatShebaDisplay($shebaRaw);
+$cardDisplay   = $formatCardDisplay($cardRaw);
 
 /* ─── Order lookup ─── */
 $stmt = $db->prepare("
@@ -178,17 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $invoice = $lockInv->fetch();
 
                     if (!$invoice) {
-                        $invNumber = null;
-                        for ($i = 0; $i < 5; $i++) {
-                            $candidate = 'INV-' . date('ymd') . '-' . str_pad((string)random_int(0, 9999), 4, '0', STR_PAD_LEFT);
-                            $chk = $db->prepare("SELECT id FROM invoices WHERE invoice_number=? LIMIT 1");
-                            $chk->execute([$candidate]);
-                            if (!$chk->fetch()) {
-                                $invNumber = $candidate;
-                                break;
-                            }
-                        }
-                        if ($invNumber === null) throw new RuntimeException('inv_generation_failed');
+                        $invNumber = generate_unique_number($db, 'INV', 'invoices', 'invoice_number');
 
                         $db->prepare("INSERT INTO invoices (invoice_number, order_id, user_id, total, paid_total, status) VALUES (?,?,?,?,0,'unpaid')")
                             ->execute([$invNumber, (int)$lockedOrder['id'], $userId, (int)$lockedOrder['total']]);
@@ -438,7 +479,7 @@ ob_start();
                             <span class="payment-method-check">✓</span>
                         </label>
 
-                        <label class="payment-method-card">
+                        <!-- <label class="payment-method-card">
                             <input type="radio" name="method" value="cash_receipt">
                             <span class="payment-method-icon">🧾</span>
                             <span class="payment-method-content">
@@ -446,7 +487,7 @@ ob_start();
                                 <small>واریز نقدی و ارسال فیش</small>
                             </span>
                             <span class="payment-method-check">✓</span>
-                        </label>
+                        </label> -->
 
                         <label class="payment-method-card payment-method-card-online">
                             <input type="radio" name="method" value="online" disabled>
@@ -470,19 +511,23 @@ ob_start();
                     <div class="bank-detail" id="shebaBox" hidden>
                         <span>شماره شبا</span>
                         <div class="bank-value-row">
-                            <code dir="ltr"><?= $h($settings['payment_sheba'] ?? '-') ?></code>
-                            <button type="button" class="btn-copy" data-copy="<?= $h($settings['payment_sheba'] ?? '') ?>">کپی</button>
+                            <code dir="ltr"><?= $shebaDisplay !== '' ? $h($shebaDisplay) : '-' ?></code>
+                            <?php if ($shebaRaw !== ''): ?>
+                                <button type="button" class="btn-copy" data-copy="<?= $h($shebaRaw) ?>">کپی</button>
+                            <?php endif; ?>
                         </div>
-                        <small>به نام <?= $h($settings['payment_card_name'] ?? '') ?></small>
+                        <small>به نام <?= $h($cardName) ?></small>
                     </div>
 
                     <div class="bank-detail" id="cardBox" hidden>
                         <span>شماره کارت</span>
                         <div class="bank-value-row">
-                            <code dir="ltr"><?= $h($settings['payment_card'] ?? '-') ?></code>
-                            <button type="button" class="btn-copy" data-copy="<?= $h($settings['payment_card'] ?? '') ?>">کپی</button>
+                            <code dir="ltr"><?= $cardDisplay !== '' ? $h($cardDisplay) : '-' ?></code>
+                            <?php if ($cardRaw !== ''): ?>
+                                <button type="button" class="btn-copy" data-copy="<?= $h($cardRaw) ?>">کپی</button>
+                            <?php endif; ?>
                         </div>
-                        <small>به نام <?= $h($settings['payment_card_name'] ?? '') ?></small>
+                        <small>به نام <?= $h($cardName) ?></small>
                     </div>
                 </section>
 
@@ -498,9 +543,11 @@ ob_start();
                     <div class="payment-amount-box">
                         <label for="paymentAmount">مبلغ پرداخت</label>
                         <div class="payment-amount-input">
-                            <input type="number" id="paymentAmount" name="amount"
-                                min="1" max="<?= (int)$payableAmount ?>" step="1"
-                                inputmode="numeric" placeholder="<?= (int)$payableAmount ?>">
+                            <input type="text" id="paymentAmount" name="amount"
+                                inputmode="numeric"
+                                value="<?= $moneyFa($payableAmount, 0) ?>"
+                                data-max="<?= (int)$payableAmount ?>"
+                                placeholder="مبلغ را وارد کنید">
                             <span>تومان</span>
                         </div>
                         <small>حداکثر قابل پرداخت: <b><?= $moneyFa($payableAmount) ?></b></small>
@@ -559,6 +606,13 @@ ob_start();
         const receiptInput = document.getElementById('receipt');
         const submitButton = document.getElementById('paymentSubmit');
 
+        function faToEn(str) {
+            return String(str || '')
+                .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+                .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+                .replace(/[^\d]/g, '');
+        }
+
         function validateForm() {
             if (!submitButton) return;
             const selected = document.querySelector('input[name="method"]:checked');
@@ -567,13 +621,13 @@ ob_start();
                 return;
             }
 
-            const amount = Number(amountInput?.value || 0);
-            const max = Number(amountInput?.max || 0);
+            const amount = parseInt(faToEn(amountInput?.value), 10) || 0;
+            const max = parseInt(amountInput?.dataset.max || 0, 10) || 0;
             const ref = (referenceInput?.value || '').trim();
             const hasReceipt = !!(receiptInput?.files?.length > 0);
 
             submitButton.disabled = !(amount > 0 && amount <= max && (ref !== '' || hasReceipt));
-        }
+        }   
 
         function updatePaymentForm() {
             const selected = document.querySelector('input[name="method"]:checked');
@@ -594,7 +648,48 @@ ob_start();
         receiptInput?.addEventListener('change', validateForm);
     })();
 </script>
+<script>
+    (function() {
+        const input = document.getElementById('paymentAmount');
+        if (!input) return;
 
+        function faToEn(str) {
+            return String(str)
+                .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+                .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+                .replace(/[^\d]/g, '');
+        }
+
+        function enToFa(str) {
+            return String(str).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹' [d]);
+        }
+
+        function formatFa(num) {
+            const s = String(num).replace(/\B(?=(\d{3})+(?!\d))/g, '٬');
+            return enToFa(s);
+        }
+
+        // فرمت هنگام تایپ
+        input.addEventListener('input', function() {
+            let raw = faToEn(this.value);
+            if (raw === '') {
+                this.value = '';
+                return;
+            }
+            // حذف صفرهای ابتدایی
+            raw = String(parseInt(raw, 10));
+            this.value = formatFa(raw);
+        });
+
+        // قبل از ارسال فرم، مقدار را به عدد لاتین خالص تبدیل کن
+        const form = input.closest('form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                input.value = faToEn(input.value);
+            });
+        }
+    })();
+</script>
 <?php
 $content = ob_get_clean();
 require ROOT_PATH . '/views/layouts/main.php';

@@ -19,15 +19,16 @@ $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
 $num = trim($_GET['num'] ?? '');
 
+$buyerId = (int)($_SESSION['customer_id'] ?? $_SESSION['admin_id'] ?? 0);
+
 $stmt = db()->prepare("
-    SELECT invoice_number 
-    FROM invoices 
-    WHERE order_id = (
-        SELECT id FROM orders WHERE order_number = ? LIMIT 1
-    ) 
+    SELECT i.invoice_number
+    FROM invoices i
+    JOIN orders o ON o.id = i.order_id
+    WHERE o.order_number = ? AND o.user_id = ?
     LIMIT 1
 ");
-$stmt->execute([$num]);
+$stmt->execute([$num, $buyerId]);
 $invNumber = $stmt->fetchColumn() ?: '';
 
 $pageTitle = 'سفارش ثبت شد | رابطی';

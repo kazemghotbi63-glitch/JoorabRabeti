@@ -274,7 +274,71 @@ final class PricingService
     /* ═══════════════════════════════════════════════════════════════
        کمکی‌ها
     ═══════════════════════════════════════════════════════════════ */
+    /* ⭐ FIX: قاعده مشترک حداقل خرید محصولات جفتی */
 
+    /** حداقل مجموع خرید محصولات جفتی (قاعده تجاری) */
+    public const CART_MIN_PAIR_QTY = 12;
+
+    /**
+     * مجموع تعداد محصولات با واحد «جفتی» در یک سبد مشخص
+     */
+    public static function getPairQtyByCart(PDO $db, int $cartId): int
+    {
+        if ($cartId <= 0) {
+            return 0;
+        }
+
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(
+                CASE
+                    WHEN COALESCE((
+                        SELECT ps.spec_value
+                        FROM product_specs ps
+                        WHERE ps.product_id = ci.product_id
+                          AND ps.spec_key = 'واحد سفارش'
+                        LIMIT 1
+                    ), 'جفتی') = 'جفتی'
+                    THEN ci.qty
+                    ELSE 0
+                END
+            ), 0)
+            FROM cart_items ci
+            WHERE ci.cart_id = ?
+        ");
+        $stmt->execute([$cartId]);
+
+        return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * مجموع تعداد محصولات «جفتی» در سبد فعال یک کاربر
+     */
+    public static function getPairQtyByUser(PDO $db, int $userId): int
+    {
+        if ($userId <= 0) {
+            return 0;
+        }
+
+        $stmt = $db->prepare("
+            SELECT id FROM carts
+            WHERE user_id = ? AND status = 'active'
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $cartId = (int)($stmt->fetchColumn() ?: 0);
+
+        return $cartId > 0 ? self::getPairQtyByCart($db, $cartId) : 0;
+    }
+
+    /**
+     * آیا سبد قاعده حداقل ۱۲ جفت را نقض می‌کند؟
+     * (اگر هیچ محصول جفتی در سبد نباشد، محدودیت اعمال نمی‌شود)
+     */
+    public static function violatesPairMinimum(int $pairQty): bool
+    {
+        return $pairQty > 0 && $pairQty < self::CART_MIN_PAIR_QTY;
+    }
+    
     private static function formatPercent(float $p): string
     {
         $rounded = round($p, 2);

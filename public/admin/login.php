@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /* Auto-detect bootstrap (local + host) */
 $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',

@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS payment_verification_history (
+CREATE TABLE IF NOT EXISTS payment_verification_history (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
     payment_id INT UNSIGNED NOT NULL,

@@ -11,13 +11,13 @@ unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 
-if (!is_logged_in()) {
-    header('Location: /');
+if (!is_customer_logged_in()) {
+    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
     exit;
 }
 
 $db = db();
-$userId = (int)($_SESSION['customer_id'] ?? $_SESSION['admin_id'] ?? 0);
+$userId = (int)($_SESSION['customer_id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /account-orders');

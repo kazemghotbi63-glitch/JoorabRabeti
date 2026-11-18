@@ -180,7 +180,4 @@
             /* شروع */
             renderDots();
             updateUI();
-
-            console.log('[IG] carousel ready, items:', document.querySelectorAll('.r6-ig-item').length,
-                '| pages:', getPageCount());
         })();

@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    Rabati Home — Unified Theme v3
    فیروزه‌ای → هدر، هیرو، سفارش اختصاصی، CTA، فوتر
    آبی فولادی → دسته‌بندی
@@ -48,10 +48,10 @@
   margin-left: 0 !important;
   margin-right: 0 !important;
   box-sizing: border-box !important;
-  padding-left: 24px !important;
-  padding-right: 24px !important;
-  padding-top: 72px !important;
-  padding-bottom: 72px !important;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+  padding-top: 20px !important;
+  padding-bottom: 20px !important;
 }
 
 /* محتوای درونی سکشن‌ها */
@@ -472,10 +472,10 @@
   .r6-why-section,
   .r6-ig,
   .r6-final {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-    padding-top: 48px !important;
-    padding-bottom: 48px !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    padding-top: 20px !important;
+    padding-bottom: 20px !important;
   }
 
   .r6-hero {
@@ -586,8 +586,8 @@
   .r6-why-section,
   .r6-ig,
   .r6-final {
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+    padding-left: 3px !important;
+    padding-right: 3px !important;
   }
 }
 /* ═══════════════ تازه‌ها — بج شماره مینیمال ═══════════════ */
@@ -655,7 +655,7 @@
 .r6-why-section,
 .r6-ig,
 .r6-final {
-  padding: 72px 24px !important;
+  padding: 20px 24px !important;
   margin: 0 !important;
   box-shadow: none !important;
   border-top: none !important;
@@ -743,7 +743,7 @@
   .r6-why-section,
   .r6-ig,
   .r6-final {
-    padding: 48px 16px !important;
+    padding: 20px 16px !important;
   }
 
   .r6-hero {
@@ -766,8 +766,8 @@
   .r6-why-section,
   .r6-ig,
   .r6-final {
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
   }
 }
 
@@ -786,7 +786,7 @@
 .r6-why-section,
 .r6-ig,
 .r6-final {
-  padding: 72px 24px !important;
+  padding: 20px 24px !important;
   margin: 0 !important;
   box-shadow: none !important;
   border-top: none !important;
@@ -874,7 +874,7 @@
   .r6-why-section,
   .r6-ig,
   .r6-final {
-    padding: 48px 16px !important;
+    padding: 20px 16px !important;
   }
 
   .r6-hero {
@@ -897,8 +897,8 @@
   .r6-why-section,
   .r6-ig,
   .r6-final {
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
   }
 }
 /* هیرو همیشه full-width */
@@ -939,4 +939,76 @@
 }
 .r6-card .r6-card-img {
   position: relative;
+}
+
+/* ── هدر بخش دسته‌بندی ── */
+.rp-head {
+  text-align: center;
+  margin-bottom: 32px;
+  font-family: Vazirmatn, Tahoma, sans-serif;
+}
+
+.rp-eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #b8860b;
+  background: rgba(184, 134, 11, 0.08);
+  border: 1px solid rgba(184, 134, 11, 0.25);
+  border-radius: 999px;
+  padding: 6px 16px;
+  margin-bottom: 14px;
+  letter-spacing: 0.2px;
+}
+
+.rp-title {
+  font-size: clamp(26px, 5vw, 38px);
+  font-weight: 800;
+  color: #1a1a2e;
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.rp-subtitle {
+  font-size: clamp(16px, 3vw, 20px);
+  font-weight: 500;
+  color: #b8860b;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.rp-desc {
+  font-size: 14px;
+  font-weight: 400;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.8;
+}
+/* ── سرتیر دسته‌بندی ── */
+.rp-cats-head {
+  text-align: right;
+  margin: 28px 0 18px;
+  font-family: Vazirmatn, Tahoma, sans-serif;
+}
+
+.rp-cats-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+  line-height: 1.4;
+  position: relative;
+  padding-right: 14px;
+}
+
+.rp-cats-title::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: #b8860b;
 }

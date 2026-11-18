@@ -97,8 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'شماره موبایل صحیح نیست.';
     } elseif (!$isValidNationalCode($nationalCode)) {
         $error = 'کد ملی ۱۰ رقمی معتبر وارد کنید.';
-    } elseif (strlen($password) < 4) {
-        $error = 'رمز عبور باید حداقل ۴ کاراکتر باشد.';
+    } elseif (strlen($password) < 8) {
+        $error = 'رمز عبور باید حداقل ۸ کاراکتر باشد.';
     } elseif ($password !== $password2) {
         $error = 'تکرار رمز عبور صحیح نیست.';
     } else {

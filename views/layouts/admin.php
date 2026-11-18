@@ -25,19 +25,15 @@ $countMessages = $adminCount("SELECT COUNT(*) FROM contact_messages WHERE status
 
 $countPendingCustomers = $adminCount("SELECT COUNT(*) FROM companies WHERE status = 'pending'");
 
-$countPendingOrders = $adminCount("
-    SELECT COUNT(*)
-    FROM orders
-    WHERE status IN ('pending_review', 'processing')
-       OR fulfillment_status IN ('pending', 'processing')
-       OR payment_status = 'pending_verification'
-");
+// ═══ اعداد تفکیک‌شده برای هر دپارتمان (جدید) ═══
+$countFinancePending   = $adminCount("SELECT COUNT(*) FROM orders WHERE status = 'pending_review'");
+$countWarehousePending = $adminCount("SELECT COUNT(*) FROM orders WHERE status = 'processing'");
+$countShippingPending  = $adminCount("SELECT COUNT(*) FROM orders WHERE status = 'packed'");
 
 unset($adminCount);
 
 $adminPageTitle = $pageTitle ?? 'پنل مدیریت';
 $activeMenu     = $activeMenu ?? '';
-
 /*
 |--------------------------------------------------------------------------
 | SVG Icons
@@ -187,7 +183,6 @@ if (!function_exists('admin_icon')) {
 | Menu structure — 8 collapsible sections (single-open accordion)
 |--------------------------------------------------------------------------
 */
-
 $menuGroups = [
 
     /* ── لینک ثابت بالای منو ── */
@@ -205,12 +200,12 @@ $menuGroups = [
         'label' => 'سفارش‌ها و ارسال',
         'icon'  => 'orders',
         'items' => [
-            ['key' => 'orders',    'label' => 'سفارش‌ها',        'url' => '/admin/orders',       'icon' => 'orders',    'badge' => $countPendingOrders],
-            ['key' => 'shipments', 'label' => 'ارسال و مرجوعی', 'url' => '/admin/shipments',     'icon' => 'inventory'],
+            ['key' => 'orders',    'label' => 'سفارش‌ها (انبار)', 'url' => '/admin/orders',       'icon' => 'orders',    'badge' => $countWarehousePending],
+            ['key' => 'shipping',  'label' => 'پنل ارسال',       'url' => '/admin/shipping',     'icon' => 'inventory', 'badge' => $countShippingPending],
+            ['key' => 'shipments', 'label' => 'گزارش ارسال',     'url' => '/admin/shipments',    'icon' => 'invoice'],
             ['key' => 'custom',    'label' => 'سفارش اختصاصی',  'url' => '/admin/custom-orders', 'icon' => 'custom',     'badge' => $countCustom],
         ],
     ],
-
     /* ── ۲. مالی ── */
     [
         'type'  => 'section',
@@ -218,7 +213,7 @@ $menuGroups = [
         'label' => 'مالی',
         'icon'  => 'payment',
         'items' => [
-            ['key' => 'payments',    'label' => 'پرداخت‌ها',         'url' => '/admin/payments',      'icon' => 'payment'],
+            ['key' => 'payments',    'label' => 'پرداخت‌ها',         'url' => '/admin/payments',      'icon' => 'payment', 'badge' => $countFinancePending],
             ['key' => 'receivables', 'label' => 'مطالبات و سررسید', 'url' => '/admin/receivables',   'icon' => 'invoice'],
             ['key' => 'reports',     'label' => 'دفتر مالی',         'url' => '/admin/report-ledger', 'icon' => 'invoice'],
         ],
@@ -497,7 +492,7 @@ $menuGroups = [
 
                 </a>
 
-                <a href="/admin/logout" class="admin-sidebar-footer-link admin-sidebar-logout">
+                <a href="/admin/logout?t=<?= urlencode(logout_token()) ?>" class="admin-sidebar-footer-link admin-sidebar-logout">
 
                     <span class="admin-nav-icon">
                         <?= admin_icon('logout') ?>

@@ -43,7 +43,7 @@ $setAmt      = (float)($order['settlement_amount'] ?? 0);
             (کد <?= $h($order['ref_product_code']) ?>)</p>
     <?php endif; ?>
     <?php if (!empty($order['logo_path'])): ?>
-        <p class="coi-ref-line">🎨 طرح/لوگوی ارسالی شما: <a href="/<?= $h($order['logo_path']) ?>" target="_blank" rel="noopener">مشاهده فایل ↗</a></p>
+        <p class="coi-ref-line">🎨 طرح/لوگوی ارسالی شما: <a href="<?= $h(private_file_url($order['logo_path'])) ?>" target="_blank" rel="noopener">مشاهده فایل ↗</a></p>
     <?php endif; ?>
 
     <table class="coi-items">
@@ -142,7 +142,7 @@ $setAmt      = (float)($order['settlement_amount'] ?? 0);
         <p class="field-hint">شماره کارت/حساب توسط کارشناس به شما پیامک یا در واتساپ اعلام می‌شود.
             پس از واریز، تصویر رسید را همین‌جا بارگذاری کنید تا بررسی و تایید شود.</p>
         <?php if (!empty($order['down_payment_receipt_path'])): ?>
-            <p class="field-hint">✔ رسید شما ثبت شده — <a href="/<?= $h($order['down_payment_receipt_path']) ?>" target="_blank">مشاهده</a> — در انتظار تایید کارشناس</p>
+            <p class="field-hint">✔ رسید شما ثبت شده — <a href="<?= $h(private_file_url($order['down_payment_receipt_path'])) ?>" target="_blank">مشاهده</a> — در انتظار تایید کارشناس</p>
         <?php else: ?>
             <form method="post" action="" enctype="multipart/form-data" novalidate>
                 <?= co_csrf_field() ?>
@@ -240,7 +240,7 @@ $setAmt      = (float)($order['settlement_amount'] ?? 0);
         <p class="field-hint">پس از واریز مابه‌التفاوت، تصویر رسید را بارگذاری کنید تا تایید شود و
             تولید انبوه آغاز گردد.</p>
         <?php if (!empty($order['settlement_receipt_path'])): ?>
-            <p class="field-hint">✔ رسید شما ثبت شده — <a href="/<?= $h($order['settlement_receipt_path']) ?>" target="_blank">مشاهده</a> — در انتظار تایید کارشناس</p>
+            <p class="field-hint">✔ رسید شما ثبت شده — <a href="<?= $h(private_file_url($order['settlement_receipt_path'])) ?>" target="_blank">مشاهده</a> — در انتظار تایید کارشناس</p>
         <?php else: ?>
             <form method="post" action="" enctype="multipart/form-data" novalidate>
                 <?= co_csrf_field() ?>
@@ -374,10 +374,10 @@ $setAmt      = (float)($order['settlement_amount'] ?? 0);
                 ✅ مدارک شما ارسال شده و در انتظار بررسی کارشناس است.
             </div>
             <?php if (!empty($order['id_card_front_path'])): ?>
-                <p class="field-hint">روی کارت ملی: <a href="/<?= $h($order['id_card_front_path']) ?>" target="_blank">مشاهده ↗</a></p>
+                <p class="field-hint">روی کارت ملی: <a href="<?= $h(private_file_url($order['id_card_front_path'])) ?>" target="_blank">مشاهده ↗</a></p>
             <?php endif; ?>
             <?php if (!empty($order['id_card_back_path'])): ?>
-                <p class="field-hint">پشت کارت ملی: <a href="/<?= $h($order['id_card_back_path']) ?>" target="_blank">مشاهده ↗</a></p>
+                <p class="field-hint">پشت کارت ملی: <a href="<?= $h(private_file_url($order['id_card_back_path'])) ?>" target="_blank">مشاهده ↗</a></p>
             <?php endif; ?>
         <?php else: ?>
             <form method="post" action="" enctype="multipart/form-data" novalidate>

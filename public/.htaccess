@@ -5,7 +5,7 @@
 ServerSignature Off
 
 # -----------------------------------------------------
-#  1. HTTPS Redirect — production only
+#  1. HTTPS Redirect â€” production only
 # -----------------------------------------------------
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -25,7 +25,7 @@ ServerSignature Off
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
     
-    # HSTS — production only
+    # HSTS â€” production only
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
     
     Header unset X-Powered-By
@@ -78,22 +78,29 @@ ServerSignature Off
 DirectoryIndex index.php index.html
 
 # -----------------------------------------------------
-#  7. Rewrite Rules (بقیه همون قبلی)
+#  7. Rewrite Rules (ط¨ظ‚غŒظ‡ ظ‡ظ…ظˆظ† ظ‚ط¨ظ„غŒ)
 # -----------------------------------------------------
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
+
+    # ظپط§غŒظ„â€Œظ‡ط§غŒ ط®طµظˆطµغŒ (ظپغŒط´طŒ ع©ط§ط±طھ ظ…ظ„غŒطŒ ط±ط³غŒط¯) ظپظ‚ط· ط§ط² ظ…ط³غŒط± /file ط¨ط§ ع©ظ†طھط±ظ„ ط¯ط³طھط±ط³غŒ ط³ط±ظˆ ظ…غŒâ€Œط´ظˆظ†ط¯
+    RewriteRule ^uploads/(receipts|custom-orders)/ - [F,L]
+    # ط§ط¬ط±ط§غŒ ط§ط³ع©ط±غŒظ¾طھ ط¯ط§ط®ظ„ uploads ظ…ظ…ظ†ظˆط¹
+    RewriteRule ^uploads/.*\.(php[0-9]?|phtml|phar|phps|cgi|pl|py|sh)$ - [F,L,NC]
 
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
     # API
+    RewriteRule ^file/?$                file.php [L,QSA]
     RewriteRule ^api/login/?$           api/login.php [L,QSA]
     RewriteRule ^api/logout/?$          api/logout.php [L,QSA]
     RewriteRule ^api/register/?$        api/register.php [L,QSA]
     RewriteRule ^api/cart/?$            api/cart.php [L,QSA]
     RewriteRule ^api/forgot-password/?$ api/forgot-password.php [L,QSA]
+    RewriteRule ^api/product-price/?$   api/product-price.php [L,QSA]
 
     # Admin
     RewriteRule ^admin/login/?$         admin/login.php [L,QSA]

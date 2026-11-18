@@ -311,6 +311,12 @@ if ($order === null && $code !== '' && isset($_GET['code'])) {
 if ($order !== null) {
     $order = co_load_order_full((int)$order['id']);
 }
+if ($order !== null) {
+    $_SESSION['co_access'] = array_slice(array_values(array_unique(array_merge(
+        array_map('intval', (array)($_SESSION['co_access'] ?? [])),
+        [(int)$order['id']]
+    ))), -20);
+}
 
 /* پیام‌های ok از PRG */
 if (!empty($_GET['ok'])) {

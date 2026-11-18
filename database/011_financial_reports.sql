@@ -1,1 +1,1 @@
-﻿-- merged into 007_orders_discount_amount.sql
+-- merged into 007_orders_discount_amount.sql

@@ -610,7 +610,7 @@ ob_start();
                     <p><b>شماره پیش‌فاکتور:</b> <?= $h($order['proforma_number'] ?: '—') ?></p>
                     <p><b>تاریخ پیش‌فاکتور:</b> <?= $h(co_fa_date($order['proforma_issued_at'] ?? null)) ?></p>
                     <p><b>تایید ادمین:</b> <?= $h(co_fa_date($order['admin_approved_at'] ?? null)) ?></p>
-                    <p><b>رسید پیش‌پرداخت:</b> <?= $order['down_payment_receipt_path'] ? '<a href="/' . $h($order['down_payment_receipt_path']) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
+                    <p><b>رسید پیش‌پرداخت:</b> <?= $order['down_payment_receipt_path'] ? '<a href="' . $h(private_file_url($order['down_payment_receipt_path'])) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
                     <p><b>پرداخت‌شده در:</b> <?= $h(co_fa_date($order['down_payment_paid_at'] ?? null)) ?> <?= !empty($order['payment_method']) ? '(' . $h($order['payment_method']) . ')' : '' ?></p>
                     <?php if (!empty($order['admin_note'])): ?>
                         <p><b>یادداشت ادمین:</b> <?= nl2br($h($order['admin_note'])) ?></p>
@@ -635,14 +635,14 @@ ob_start();
                     <?php if (!empty($order['sample_revision_note'])): ?>
                         <p><b>یادداشت اصلاح:</b> <?= nl2br($h($order['sample_revision_note'])) ?></p>
                     <?php endif; ?>
-                    <p><b>طرح/لوگو:</b> <?= !empty($order['logo_path']) ? '<a href="/' . $h($order['logo_path']) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
+                    <p><b>طرح/لوگو:</b> <?= !empty($order['logo_path']) ? '<a href="' . $h(private_file_url($order['logo_path'])) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
                 </div>
 
                 <div class="coa-card">
                     <h3>💳 تسویه</h3>
                     <p><b>مبلغ تسویه:</b> <?= $order['settlement_amount'] !== null ? number_format((float)$order['settlement_amount']) . ' تومان' : '—' ?></p>
                     <p><b>دستور تسویه در:</b> <?= $h(co_fa_date($order['settlement_order_at'] ?? null)) ?></p>
-                    <p><b>رسید تسویه:</b> <?= $order['settlement_receipt_path'] ? '<a href="/' . $h($order['settlement_receipt_path']) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
+                    <p><b>رسید تسویه:</b> <?= $order['settlement_receipt_path'] ? '<a href="' . $h(private_file_url($order['settlement_receipt_path'])) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
                     <p><b>تسویه‌شده در:</b> <?= $h(co_fa_date($order['settlement_paid_at'] ?? null)) ?></p>
                 </div>
 
@@ -668,9 +668,9 @@ ob_start();
                 <div class="coa-card">
                     <h3>📜 توافق‌نامه و مدارک (اختیاری)</h3>
                     <p><b>امضای دیجیتال:</b> <?= $order['agreement_signed_at'] ? $h($order['agreement_signature_name']) . ' — ' . $h(co_fa_date($order['agreement_signed_at'])) : '—' ?></p>
-                    <p><b>اسکن قرارداد:</b> <?= $order['agreement_scan_path'] ? '<a href="/' . $h($order['agreement_scan_path']) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
-                    <p><b>کد ملی (رو):</b> <?= $order['id_card_front_path'] ? '<a href="/' . $h($order['id_card_front_path']) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
-                    <p><b>کد ملی (پشت):</b> <?= $order['id_card_back_path'] ? '<a href="/' . $h($order['id_card_back_path']) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
+                    <p><b>اسکن قرارداد:</b> <?= $order['agreement_scan_path'] ? '<a href="' . $h(private_file_url($order['agreement_scan_path'])) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
+                    <p><b>کد ملی (رو):</b> <?= $order['id_card_front_path'] ? '<a href="' . $h(private_file_url($order['id_card_front_path'])) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
+                    <p><b>کد ملی (پشت):</b> <?= $order['id_card_back_path'] ? '<a href="' . $h(private_file_url($order['id_card_back_path'])) . '" target="_blank">مشاهده ↗</a>' : '—' ?></p>
                     <p><b>تایید مدارک:</b> <?= $h(co_fa_date($order['documents_verified_at'] ?? null)) ?></p>
                 </div>
             </div>

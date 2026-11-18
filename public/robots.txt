@@ -8,4 +8,4 @@ Disallow: /payment
 Disallow: /account-orders
 Disallow: /invoice-print
 
-Sitemap: https://jorabrabeti.ir/sitemap.xml
+Sitemap: https://joorabrabeti.ir/sitemap.xml

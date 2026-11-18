@@ -442,8 +442,8 @@
         return showFormError(err, "نام و نام خانوادگی را وارد کنید.");
       if (!/^09\d{9}$/.test(mobile))
         return showFormError(err, "شماره موبایل صحیح نیست.");
-      if (password.length < 6)
-        return showFormError(err, "رمز عبور باید حداقل ۶ کاراکتر باشد.");
+      if (password.length < 4)
+        return showFormError(err, "رمز عبور باید حداقل ٤ کراکتر باشد.");
       if (password !== password2)
         return showFormError(err, "تکرار رمز عبور صحیح نیست.");
       if (!isLegal && !/^\d{10}$/.test(nationalCode))
@@ -621,7 +621,7 @@
 
       if (code.length !== 6)
         return window.showToast("⚠️ کد ۶ رقمی را وارد کنید");
-      if (p1.length < 8) return window.showToast("⚠️ رمز جدید حداقل ۸ کاراکتر");
+      if (p1.length < 4) return window.showToast("⚠️ رمز جدید حداقل ٤ کاراکتر");
       if (p1 !== p2) return window.showToast("⚠️ تکرار رمز صحیح نیست");
 
       if (btn) {

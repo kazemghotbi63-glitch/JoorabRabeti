@@ -12,6 +12,11 @@ require_once ROOT_PATH . '/config/auth.php';
 
 $wasAdmin = is_admin_logged_in();
 
+if (!logout_token_valid()) {
+    header('Location: ' . ($wasAdmin ? '/admin' : '/'));
+    exit;
+}
+
 logout_session();
 
 header(

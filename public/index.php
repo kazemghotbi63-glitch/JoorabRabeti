@@ -343,8 +343,8 @@ ob_start();
 
 
 <!-- ═══ ۱. HERO ═══ -->
-
 <section class="r6-hero" id="r6Hero">
+
 
     <?php if (!empty($heroBanners)): ?>
 
@@ -387,19 +387,17 @@ ob_start();
                         <h1>
                             <?= $h(
                                 $banner['title']
-                                    ?? 'جوراب‌هایی که فروش می‌روند.'
+                                    ?? 'تولیدکننده و فروش عمده جوراب رابطی'
                             ) ?>
                         </h1>
-
 
                         <p>
                             <?= $h(
                                 $banner['subtitle']
-                                    ?? 'تأمین مستقیم از تولیدکننده؛ قیمت همکاری، موجودی واقعی و سفارش سریع'
+                                    ?? 'خرید عمده انواع جوراب مردانه، زنانه و بچگانه با قیمت مستقیم تولیدکننده و شرایط همکاری'
                             ) ?>
                         </p>
-
-
+                        <!-- 
                         <div class="r6-hero-cta">
 
                             <a
@@ -423,7 +421,7 @@ ob_start();
 
                             </a>
 
-                        </div>
+                        </div> -->
 
                     </div>
 
@@ -507,14 +505,20 @@ ob_start();
 <!-- ═══ ۲. دسته‌بندی پریمیوم ═══ -->
 <!-- ⭐ CSS این بخش با $pageCss به <head> منتقل شد (حذف رندر-بلاک از بدنه صفحه) -->
 
+
 <section class="r-cats-premium">
 
     <div class="rp-inner">
 
         <div class="rp-head">
             <span class="rp-eyebrow">انتخاب مطمئن برای تمام سلیقه‌ها</span>
-            <h2>دسته‌بندی جوراب عمده</h2>
-            <p>تولیدکننده تخصصی جوراب — مستقیم از کارگاه رابطی</p>
+            <h1 class="rp-title">کارخانه جوراب رابطی</h1>
+            <h2 class="rp-subtitle">مستقیم، بدون واسطه</h2>
+        </div>
+        <div class="rp-cats-head">
+            <h2 class="rp-cats-title">دسته‌بندی جوراب عمده</h2>
+            <p></p>
+
         </div>
 
         <div class="rp-parents" role="tablist">
@@ -638,21 +642,21 @@ ob_start();
 <!-- ═══ ۲.۵ سفارش اختصاصی ═══ -->
 
 <section class="r6-custom-section">
+    <span class="r6-custom-eyebrow">
+        چرا خرید از رابطی؟
+    </span>
 
+    <h3>سفارش اختصاصی رابطی</h3>
+
+    <p>
+        تولید جوراب با طرح و نام اختصاصی برای مجموعه‌ها،
+        فروشگاه‌ها و سازمان‌ها — از طراحی تا بسته‌بندی.
+    </p>
     <div class="r6-custom-inner">
 
         <div class="r6-custom-body">
 
-            <span class="r6-custom-eyebrow">
-                چرا خرید از رابطی؟
-            </span>
 
-            <h3>سفارش اختصاصی رابطی</h3>
-
-            <p>
-                تولید جوراب با طرح و نام اختصاصی برای مجموعه‌ها،
-                فروشگاه‌ها و سازمان‌ها — از طراحی تا بسته‌بندی.
-            </p>
 
             <div class="r6-custom-features">
 
@@ -858,7 +862,7 @@ ob_start();
 
             <div>
 
-                <span class="r6-eyebrow">
+                <span class="r6-eyebrow" id="new">
                     کالکشن تازه
                 </span>
 
@@ -874,7 +878,7 @@ ob_start();
 
 
                 <a
-                    href="/products"
+                    href="/products?sort=new"
                     class="r-sec-link">
 
                     دیدن همه تازه‌ها ←
@@ -960,11 +964,11 @@ ob_start();
 
                 <div class="r6-ig-head">
                     <div class="r6-ig-head-l">
-                        <span class="r6-ig-eyebrow">@rabati.socks</span>
+                        <span class="r6-ig-eyebrow">@tolidi_jorab_rabeti</span>
                         <h2>ما را در اینستاگرام دنبال کنید</h2>
                         <p>جدیدترین طرح‌ها و پشت صحنه‌ی کارگاه رابطی</p>
                     </div>
-                    <a href="https://instagram.com/" target="_blank" rel="noopener"
+                    <a href="https://instagram.com/tolidi_jorab_rabeti" target="_blank" rel="noopener"
                         class="r6-ig-head-link">
                         مشاهده پیج <span>←</span>
                     </a>
@@ -1078,16 +1082,12 @@ ob_start();
         </div>
 
         <!-- ⭐ اسکریپت گالری به فایل خارجی منتقل شد + defer (کاهش TBT) -->
-        <script src="/assets/js/home-ig.js?v=1" defer></script>
 
     <?php endif; ?>
 
 
     <!-- ═══ HERO SLIDER JS ═══ -->
     <!-- ⭐ به فایل خارجی منتقل شد + defer (کاهش TBT) -->
-    <script src="/assets/js/home-hero.js?v=1" defer></script>
-
-
     <!-- ═══ استایل بج «در سبد» (اگر در CSS اصلی نبود) ═══ -->
     <style>
         .prod-card .in-cart-badge {
@@ -1290,6 +1290,8 @@ ob_start();
 
             /* ─────── همگام‌سازی آیکون‌های سبد ─────── */
             function syncCartIndicators() {
+                if (window.RABETI_AUTH !== true) return;
+
                 fetch('/api/cart', {
                         method: 'GET',
                         headers: {
@@ -1328,6 +1330,12 @@ ob_start();
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
+                    /* ⭐ مهمان → مودال ثبت‌نام */
+                    if (window.RABETI_AUTH !== true) {
+                        if (typeof showToast === 'function') showToast('🔒 برای افزودن به سبد، ابتدا وارد شوید یا ثبت‌نام کنید');
+                        if (typeof openAuthModal === 'function') openAuthModal('register');
+                        return;
+                    }
 
                     var card = btn.closest('[data-product-id]');
                     if (!card) return;
@@ -1379,7 +1387,10 @@ ob_start();
                         .then(function(data) {
                             btn.disabled = false;
                             btn.textContent = oldText;
-
+                            if (data && data.error === 'برای خرید ابتدا وارد شوید') {
+                                if (typeof openAuthModal === 'function') openAuthModal('register');
+                                return;
+                            }
                             if (!data || !data.ok) {
                                 var msg = (data && data.error) ? data.error : 'خطا در افزودن به سبد';
                                 if (typeof showToast === 'function') showToast('⚠️ ' + msg);
@@ -1402,11 +1413,102 @@ ob_start();
             });
 
             /* ─────── بارگذاری اولیه آیکون‌ها ─────── */
-            syncCartIndicators();
-
+            if (window.RABETI_AUTH === true) {
+                syncCartIndicators();
+            }
         })();
     </script>
 
+    <!-- ═══ HERO SLIDER JS (ایزوله و بدون تداخل) ═══ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var hero = document.getElementById('r6Hero');
+            if (!hero) return;
+
+            var slides = Array.from(hero.querySelectorAll('.r6-hero-slide'));
+            var dots = Array.from(hero.querySelectorAll('.r6-hero-dot'));
+            var prevButton = hero.querySelector('.r6-hero-prev');
+            var nextButton = hero.querySelector('.r6-hero-next');
+
+            // اگر بنر بیشتر از یکی نبود، اسلایدر نیازی نیست
+            if (slides.length <= 1) return;
+
+            var current = 0;
+            var timer = null;
+
+            function showSlide(index) {
+                current = (index + slides.length) % slides.length;
+
+                slides.forEach(function(slide, i) {
+                    var active = (i === current);
+                    slide.classList.toggle('is-active', active);
+                    slide.style.opacity = active ? '1' : '0';
+                    slide.style.visibility = active ? 'visible' : 'hidden';
+                    slide.style.pointerEvents = active ? 'auto' : 'none';
+                    slide.style.zIndex = active ? '1' : '0';
+                });
+
+                dots.forEach(function(dot, i) {
+                    dot.classList.toggle('is-active', i === current);
+                });
+            }
+
+            function nextSlide() {
+                showSlide(current + 1);
+            }
+
+            function prevSlide() {
+                showSlide(current - 1);
+            }
+
+            function restartAutoPlay() {
+                if (timer) clearInterval(timer);
+                timer = setInterval(nextSlide, 5000);
+            }
+
+            // دکمه بعدی
+            if (nextButton) {
+                nextButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    nextSlide();
+                    restartAutoPlay();
+                });
+            }
+
+            // دکمه قبلی
+            if (prevButton) {
+                prevButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    prevSlide();
+                    restartAutoPlay();
+                });
+            }
+
+            // نقطه‌ها (Dots)
+            dots.forEach(function(dot, index) {
+                dot.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showSlide(index);
+                    restartAutoPlay();
+                });
+            });
+
+            // توقف در هاور
+            hero.addEventListener('mouseenter', function() {
+                if (timer) clearInterval(timer);
+            });
+            hero.addEventListener('mouseleave', function() {
+                restartAutoPlay();
+            });
+
+            // شروع
+            showSlide(0);
+            restartAutoPlay();
+        });
+    </script>
     <?php
 
     $content = ob_get_clean();

@@ -18,13 +18,13 @@ require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/PricingService.php';
 
-if (!is_logged_in()) {
-    header('Location: /');
+if (!is_customer_logged_in()) {
+    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
     exit;
 }
 
 $h = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
-$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+$userId = (int)($_SESSION['customer_id'] ?? 0);
 $db = db();
 
 
@@ -73,6 +73,14 @@ $stmt->execute([$userId]);
 $cartId = (int)($stmt->fetchColumn() ?: 0);
 
 if (!$cartId) {
+    header('Location: /cart');
+    exit;
+}
+/* کنترل حداقل مجموع خرید محصولات جفتی */
+/* ⭐ FIX: کنترل حداقل مجموع خرید محصولات جفتی — از منبع مشترک */
+$pairQty = PricingService::getPairQtyByCart($db, $cartId);
+
+if (PricingService::violatesPairMinimum($pairQty)) {
     header('Location: /cart');
     exit;
 }
@@ -418,8 +426,8 @@ $pageTitle = 'پیش‌فاکتور | رابطی';
                 موبایل: <span dir="ltr"><?= $h($customer['mobile'] ?? '-') ?></span>
             </div>
             <div class="info-box">
-                <b>تعداد اقلام:</b> <?= $moneyFa($totalQty) ?> جفت<br>
-                <b>تعداد ردیف:</b> <?= count($items) ?>
+                <b>تعداد کل اقلام:</b> <?= $numFa($totalQty) ?> عدد<br>
+                <b>تعداد ردیف:</b> <?= $numFa(count($items)) ?>
             </div>
         </div>
 

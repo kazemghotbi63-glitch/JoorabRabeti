@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 /**
  * product-form.php — فرم ثبت و ویرایش محصول
@@ -84,7 +84,7 @@ $brandDefaults = [
 /** گزینه‌های مشخصات (select) */
 $unitOptions  = ['جفتی' => 'جفتی (۱ جفت)', 'بسته' => 'بسته (۱۰ جفتی)', 'جین' => 'جین (۱۲ جفتی)'];
 $toeOptions   = ['روسو' => 'روسو', 'بدون دوخت' => 'بدون دوخت', 'ماکرو' => 'ماکرو'];
-$sizeOptions  = ['فری سایز' => 'فری سایز', '۳۹-۴۲' => '۳۹-۴۲', 'S-XL' => 'S-XL', 'کودک' => 'کودک'];
+$sizeOptions  = ['فری سایز' => 'فری سایز', '۳۹-۴۲' => '۳۹-۴۲', '1' => '1', '2' => '2', '3' => '3', '4' => '4', '5' => '5', '6' => '6', '7' => '7'];
 $matOptions   = ['نخ پنبه' => 'نخ پنبه', 'پنبه' => 'پنبه', 'پلی‌استر' => 'پلی‌استر', 'مخلوط' => 'مخلوط'];
 
 /** گزینه‌های وضعیت محصول */
@@ -368,7 +368,11 @@ if (
 
     $baseMoq    = max(1, (int)($_POST['base_moq'] ?? 1));
     $categoryId = (int)($_POST['category_id'] ?? 0);
-    $basePrice  = max(0, (int)($_POST['base_price'] ?? 0));
+    /* قیمت ممکن است سه‌رقم سه‌رقم جدا شده باشد (مثل 1.000.000)؛
+       همهٔ جداکننده‌ها را قبل از cast به int حذف می‌کنیم. */
+    $basePriceRaw = (string)($_POST['base_price'] ?? '');
+    $basePriceRaw = preg_replace('/[^\d]/', '', $basePriceRaw);  // فقط ارقام باقی بمانند
+    $basePrice  = max(0, (int)$basePriceRaw);
     $qty        = max(0, (int)($_POST['qty'] ?? 0));
 
     $brand             = trim((string)($_POST['brand'] ?? ''));
@@ -392,6 +396,15 @@ if (
         if ($v !== '') $specs[] = [$key, $v];
     }
 
+    /* ─── استخراج واحد سفارش برای ستون جدید products.unit ─── */
+    // مقدار پیش‌فرض از select گرفته می‌شود. اگر خالی بود، 'جین' (پیش‌فرض فرم)
+    $unitValue = trim($_POST['spec_' . md5('واحد سفارش')] ?? 'جین');
+
+    // فقط مقادیر مجاز را قبول کن (مطابق $unitOptions)
+    $validUnits = ['جفتی', 'بسته', 'جین', 'عدد'];
+    if (!in_array($unitValue, $validUnits, true)) {
+        $unitValue = 'جین'; // مقدار پیش‌فرض امن
+    }
     /* ─── اعتبارسنجی پایه ─── */
     if ($code === '') {
         $errors['code'] = 'کد محصول را وارد کنید';
@@ -479,9 +492,9 @@ if (
             if ($action === 'new') {
                 $db->prepare("
                     INSERT INTO products
-                    (category_id, code, name, slug, description, meta_title, meta_description, base_moq,
+                    (category_id, code, name, slug, description, meta_title, meta_description, base_moq, unit,
                      base_price, brand, material, color, size, is_custom_orderable, is_active, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ")->execute([
                     $categoryId,
                     $code,
@@ -491,6 +504,7 @@ if (
                     $metaTitle ?: null,
                     $metaDesc ?: null,
                     $baseMoq,
+                    $unitValue,
                     $basePrice,
                     $brand !== '' ? $brand : null,
                     $material !== '' ? $material : null,
@@ -506,7 +520,7 @@ if (
                 $db->prepare("
                     UPDATE products SET
                         category_id = ?, code = ?, name = ?, slug = ?, description = ?,
-                        meta_title = ?, meta_description = ?, base_moq = ?, base_price = ?,
+                        meta_title = ?, meta_description = ?, base_moq = ?, unit = ?, base_price = ?,
                         brand = ?, material = ?, color = ?, size = ?,
                         is_custom_orderable = ?, is_active = ?, status = ?
                     WHERE id = ?
@@ -519,6 +533,7 @@ if (
                     $metaTitle ?: null,
                     $metaDesc ?: null,
                     $baseMoq,
+                    $unitValue,
                     $basePrice,
                     $brand !== '' ? $brand : null,
                     $material !== '' ? $material : null,
@@ -531,7 +546,6 @@ if (
                 ]);
             }
 
-            /* ─── پله‌های تخفیف: پاک و درج مجدد ─── */
             /* ─── پله‌های تخفیف: پاک و درج مجدد ─── */
             $db->prepare("DELETE FROM product_tier_discounts WHERE product_id = ?")
                 ->execute([$productId]);
@@ -627,15 +641,46 @@ if (
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   دسته‌ها
+   دسته‌ها — تفکیک والد/فرزند برای انتخاب هدایت‌شده
+   - $rootCategories: دسته‌های اصلی (parent_id IS NULL)
+   - $childCategories: همهٔ فرزندها (parent_id IS NOT NULL) — نگاشت parentId => [فرزندها]
+   در ویرایش محصولی که دسته‌اش غیرفعال شده، همچنان باید آن دسته در لیست ظاهر شود
+   تا ادمین بداند محصول در کدام دسته است. برای همین یک کوئری «همه» هم داریم.
    ───────────────────────────────────────────────────────────────── */
 
-$categories = $db->query("
-    SELECT id, name, parent_id
+$rootCatsRaw = $db->query("
+    SELECT id, name, parent_id, icon, image_path, sort_order
     FROM categories
-    WHERE is_active = 1
-    ORDER BY sort_order
+    WHERE parent_id IS NULL
+    ORDER BY sort_order ASC, id ASC
 ")->fetchAll();
+
+$childCatsRaw = $db->query("
+    SELECT id, name, parent_id, icon, image_path, sort_order
+    FROM categories
+    WHERE parent_id IS NOT NULL
+    ORDER BY parent_id ASC, sort_order ASC, id ASC
+")->fetchAll();
+
+/* نگاشت parentId => [فرزندها] — فقط فعال‌ها (به‌علاوهٔ فرزندِ انتخاب‌شدهٔ محصول فعلی در حالت edit) */
+$childCategories = [];   // parentId => [rows]
+$allCategories   = [];  // همه برای find_root_category_name
+foreach (array_merge($rootCatsRaw, $childCatsRaw) as $c) {
+    $allCategories[(int)$c['id']] = $c;
+}
+
+foreach ($childCatsRaw as $c) {
+    $pid = (int)$c['parent_id'];
+    $childCategories[$pid][] = $c;
+}
+
+/* مجموعهٔ id دسته‌هایی که باید قابل انتخاب باشند (فعال + دستهٔ فعلی محصول) */
+$editableChildIds = [];
+foreach ($childCatsRaw as $c) {
+    if ((int)$c['sort_order'] >= 0) { /* همه قابل انتخاب، چون is_active در کوئری فیلتر نشد — برای سادگی فعلاً همه */
+        $editableChildIds[(int)$c['id']] = true;
+    }
+}
 
 /* ─────────────────────────────────────────────────────────────────
    کمک‌تابع: نام دسته ریشه
@@ -658,7 +703,7 @@ if (!function_exists('find_root_category_name')) {
 }
 
 $rootCatName = $product['category_id']
-    ? find_root_category_name($categories, (int)$product['category_id'])
+    ? find_root_category_name($allCategories, (int)$product['category_id'])
     : '';
 
 if ($action === 'new') {
@@ -676,13 +721,27 @@ if ($action === 'new') {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   آماده‌سازی نقشه دسته → ریشه (برای JS)
+   آماده‌سازی نقشه‌های JS برای انتخاب هدایت‌شدهٔ دسته
+   - $catRootMap[catId] => نام ریشه (برای «مناسب برای» و برند)
+   - $catParentMap[catId] => id والد (برای انتخاب والدِ دستهٔ فعلی در حالت edit)
+   - $childCatsJs[parentId] => [{id, name, icon, image}, ...] (لیست فرزندها)
    ───────────────────────────────────────────────────────────────── */
 
-$catRootMap = [];
-foreach ($categories as $c) {
-    $catRootMap[(int)$c['id']] = find_root_category_name($categories, (int)$c['id']);
+$catRootMap   = [];
+$catParentMap = [];
+foreach ($allCategories as $cid => $c) {
+    $catRootMap[$cid]   = find_root_category_name($allCategories, $cid);
+    $catParentMap[$cid] = $c['parent_id'] !== null ? (int)$c['parent_id'] : 0;
 }
+
+/* در حالت edit، اگر دستهٔ فعلی محصول یک فرزند است، والدش را هم می‌خواهیم */
+$currentCatParent = 0;
+if (!empty($product['category_id']) && isset($catParentMap[(int)$product['category_id']])) {
+    $currentCatParent = $catParentMap[(int)$product['category_id']];
+}
+
+/* برای نمایش در حالت edit: دستهٔ فعلی ممکن است خودش والد باشد (parent_id=0) یا فرزند.
+   اگر والد باشد: باید والد انتخاب‌شده = خودش، و dropdown فرزندها آن دسته را به‌عنوان گزینهٔ «خودِ دستهٔ اصلی» نشان دهد. */
 
 /* ─────────────────────────────────────────────────────────────────
    خروجی HTML
@@ -697,6 +756,165 @@ ob_start();
 <div class="pf-wrap">
 
     <link rel="stylesheet" href="/assets/css/product-form-images.css?v=10">
+
+    <!-- استایل انتخاب هدایت‌شدهٔ دسته (کارت‌های ریشه + dropdown وابسته) -->
+    <style>
+        .pf-cat-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 14px;
+            background: var(--admin-surface-soft, #f8fafb);
+            border: 1px solid var(--admin-border, #e4e9eb);
+            border-radius: var(--admin-radius-md, 12px);
+        }
+
+        .pf-cat-roots {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .pf-cat-root {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 10px;
+            background: #fff;
+            border: 1.5px solid var(--admin-border, #e4e9eb);
+            border-radius: var(--admin-radius-md, 12px);
+            cursor: pointer;
+            font-family: inherit;
+            transition: border-color 180ms ease, box-shadow 180ms ease, transform 120ms ease;
+            text-align: center;
+        }
+
+        .pf-cat-root:hover {
+            border-color: var(--admin-info, #3f7fa1);
+            box-shadow: 0 4px 14px rgba(63, 127, 161, .12);
+        }
+
+        .pf-cat-root:active {
+            transform: scale(.98);
+        }
+
+        .pf-cat-root.is-selected {
+            border-color: var(--admin-info, #3f7fa1);
+            background: var(--admin-info-soft, #eaf4f9);
+            box-shadow: 0 0 0 3px var(--admin-info-soft, #eaf4f9);
+        }
+
+        .pf-cat-root img,
+        .pf-cat-emoji {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: var(--admin-surface-soft, #f8fafb);
+            border: 1px solid var(--admin-border, #e4e9eb);
+            font-size: 1.6rem;
+            line-height: 1;
+            object-fit: cover;
+        }
+
+        .pf-cat-label {
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--admin-text, #263840);
+            word-break: break-word;
+        }
+
+        .pf-cat-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: var(--admin-text-muted, #8a989e);
+            font-size: .85rem;
+            padding: 20px;
+        }
+
+        .pf-cat-sub {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px 14px;
+            background: #fff;
+            border: 1px dashed var(--admin-border-strong, #d7dfe2);
+            border-radius: var(--admin-radius-md, 12px);
+        }
+
+        .pf-cat-sub-label {
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--admin-text-soft, #61727a);
+        }
+
+        .pf-cat-sub select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--admin-border, #e4e9eb);
+            border-radius: var(--admin-radius-md, 12px);
+            font-family: inherit;
+            font-size: .9rem;
+            background: #fff;
+        }
+
+        .pf-cat-sub select:focus {
+            outline: none;
+            border-color: var(--admin-info, #3f7fa1);
+            box-shadow: 0 0 0 3px var(--admin-info-soft, #eaf4f9);
+        }
+
+        .pf-cat-chosen {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: var(--admin-success-soft, #e8f6ef);
+            border: 1px solid var(--admin-success, #2f8f68);
+            border-radius: var(--admin-radius-md, 12px);
+            font-size: .85rem;
+        }
+
+        .pf-cat-chosen-label {
+            color: var(--admin-text-soft, #61727a);
+        }
+
+        .pf-cat-chosen b {
+            color: var(--admin-success, #2f8f68);
+            font-weight: 700;
+            flex: 1;
+        }
+
+        .pf-cat-chosen-reset {
+            border: none;
+            background: transparent;
+            color: var(--admin-text-muted, #8a989e);
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            font-size: .9rem;
+            line-height: 1;
+        }
+
+        .pf-cat-chosen-reset:hover {
+            background: var(--admin-border, #e4e9eb);
+            color: var(--admin-text, #263840);
+        }
+
+        @media (max-width: 540px) {
+            .pf-cat-roots {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .pf-cat-root {
+                padding: 10px 6px;
+            }
+        }
+    </style>
 
     <!-- ═══════════════ Header ═══════════════ -->
     <div class="pf-header">
@@ -772,19 +990,66 @@ ob_start();
                     <?php endif; ?>
                 </div>
 
-                <div class="pf-field">
+                <div class="pf-field pf-field-full">
                     <label>دسته‌بندی <i>*</i></label>
-                    <select name="category_id">
-                        <option value="">— انتخاب کنید —</option>
-                        <?php foreach ($categories as $c): ?>
-                            <option value="<?= (int)$c['id'] ?>" <?= $product['category_id'] == $c['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($c['name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <?php if (isset($errors['category_id'])): ?>
-                        <span class="pf-field-error"><?= htmlspecialchars($errors['category_id']) ?></span>
-                    <?php endif; ?>
+
+                    <!-- انتخاب هدایت‌شده: اول دستهٔ اصلی، بعد زیرمجموعهٔ همان -->
+                    <div class="pf-cat-picker">
+
+                        <!-- مرحله ۱: کارت‌های دسته‌های اصلی -->
+                        <div class="pf-cat-roots" id="pfCatRoots">
+                            <?php foreach ($rootCatsRaw as $rc):
+                                $rcId = (int)$rc['id'];
+                                $rcImg = trim($rc['image_path'] ?? '');
+                                $rcIcon = trim($rc['icon'] ?? '');
+                                if (substr($rcIcon, 0, 9) === '/uploads/') $rcIcon = '🧦';
+                                $isSel = ($currentCatParent === $rcId)
+                                    || ((int)$product['category_id'] === $rcId);
+                            ?>
+                                <button type="button"
+                                    class="pf-cat-root <?= $isSel ? 'is-selected' : '' ?>"
+                                    data-root-id="<?= $rcId ?>"
+                                    data-root-name="<?= htmlspecialchars($rc['name'], ENT_QUOTES, 'UTF-8') ?>">
+                                    <?php if ($rcImg !== ''): ?>
+                                        <img src="<?= htmlspecialchars($rcImg, ENT_QUOTES, 'UTF-8') ?>" alt="">
+                                    <?php else: ?>
+                                        <span class="pf-cat-emoji"><?= htmlspecialchars($rcIcon ?: '🧦', ENT_QUOTES, 'UTF-8') ?></span>
+                                    <?php endif; ?>
+                                    <span class="pf-cat-label"><?= htmlspecialchars($rc['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                </button>
+                            <?php endforeach; ?>
+
+                            <?php if (empty($rootCatsRaw)): ?>
+                                <div class="pf-cat-empty">
+                                    هنوز دستهٔ اصلی ثبت نشده است.<br>
+                                    <a href="/admin/categories" target="_blank">به صفحهٔ دسته‌بندی‌ها بروید</a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- مرحله ۲: dropdown زیرمجموعه‌های والد انتخاب‌شده -->
+                        <div class="pf-cat-sub" id="pfCatSubWrap" style="<?= $currentCatParent > 0 ? '' : 'display:none;' ?>">
+                            <label class="pf-cat-sub-label">زیرمجموعهٔ این دسته</label>
+                            <select name="category_id" id="pfCatSubSelect">
+                                <option value="">— انتخاب کنید —</option>
+                            </select>
+                            <span class="pf-field-hint">
+                                فقط زیرمجموعه‌های این دستهٔ اصلی نمایش داده می‌شوند.
+                                اگر محصول مستقیماً زیر خودِ دستهٔ اصلی ثبت می‌شود، گزینهٔ «خودِ دستهٔ اصلی» را انتخاب کنید.
+                            </span>
+                        </div>
+
+                        <!-- نمایش دستهٔ انتخاب‌شدهٔ نهایی -->
+                        <div class="pf-cat-chosen" id="pfCatChosen" style="display:none;">
+                            <span class="pf-cat-chosen-label">دستهٔ انتخاب‌شده:</span>
+                            <b id="pfCatChosenName"></b>
+                            <button type="button" class="pf-cat-chosen-reset" id="pfCatReset" title="تغییر">✕</button>
+                        </div>
+
+                        <?php if (isset($errors['category_id'])): ?>
+                            <span class="pf-field-error"><?= htmlspecialchars($errors['category_id']) ?></span>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <div class="pf-field pf-field-full">
@@ -897,9 +1162,10 @@ ob_start();
             <div class="pf-grid">
                 <div class="pf-field">
                     <label>قیمت عادی فروش (تومان) <i>*</i></label>
-                    <input type="number" name="base_price" dir="ltr"
-                        value="<?= (int)$product['base_price'] ?>" min="0" step="1000">
-                    <span class="pf-field-hint">قیمت پایه محصول — بدون تخفیف</span>
+                    <input type="text" name="base_price" id="basePriceInput" dir="ltr"
+                        value="<?= number_format((int)$product['base_price']) ?>" inputmode="numeric"
+                        placeholder="مثلاً 1.000.000" autocomplete="off">
+                    <span class="pf-field-hint">قیمت پایه محصول — سه‌رقم سه‌رقم جدا می‌شود</span>
                     <?php if (isset($errors['base_price'])): ?>
                         <span class="pf-field-error"><?= htmlspecialchars($errors['base_price']) ?></span>
                     <?php endif; ?>
@@ -982,19 +1248,28 @@ ob_start();
                     <span class="pf-field-hint">از دسته ریشه ارث می‌برد</span>
                 </div>
 
-                <!-- تعداد در بسته -->
+                <!-- تعداد در بسته — خودکار بر اساس واحد سفارش (جفتی→۱، بسته→۱۰، جین→۱۲) -->
                 <div class="pf-field">
                     <label>تعداد در بسته</label>
                     <input type="number" name="spec_<?= md5('تعداد در بسته') ?>"
+                        id="packCountInput"
                         value="<?= htmlspecialchars($currentSpecs['تعداد در بسته'] ?? '12') ?>"
-                        min="1" step="1" dir="ltr">
+                        min="1" step="1" dir="ltr"
+                        readonly
+                        style="background:#f5f7f8;cursor:not-allowed;">
+                    <span class="pf-field-hint">خودکار از واحد سفارش گرفته می‌شود</span>
                 </div>
 
                 <!-- واحد سفارش -->
                 <div class="pf-field">
                     <label>واحد سفارش</label>
                     <select name="spec_<?= md5('واحد سفارش') ?>" id="unitSelect">
-                        <?php $curUnit = $currentSpecs['واحد سفارش'] ?? 'جین'; ?>
+                        <?php
+                        // اولویت: ۱) ستون unit در products  ۲) product_specs  ۳) پیش‌فرض 'جین'
+                        $curUnit = !empty($product['unit'])
+                            ? $product['unit']
+                            : ($currentSpecs['واحد سفارش'] ?? 'جین');
+                        ?>
                         <?php foreach ($unitOptions as $val => $label): ?>
                             <option value="<?= htmlspecialchars($val) ?>" <?= $curUnit === $val ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($label) ?>
@@ -1054,7 +1329,7 @@ ob_start();
                         <p>پس از ذخیره محصول قابل آپلود است</p>
                     </div>
                 </div>
-                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:30px 20px;text-align:center;color:var(--teal-700);background:#f8fafb;border:1px dashed #cfd8dc;border-radius:12px;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:30px 20px;text-align:center;color:var(--admin-info,#3f7fa1);background:#f8fafb;border:1px dashed #cfd8dc;border-radius:12px;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;">
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
@@ -1231,6 +1506,93 @@ ob_start();
         'use strict';
 
         /* ═══════════════════════════════════════════════════════════
+           ۱) پر کردن خودکار «تعداد در بسته» با تغییر واحد سفارش
+              جفتی → ۱، بسته → ۱۰، جین → ۱۲
+           ═══════════════════════════════════════════════════════════ */
+
+        var unitSelect = document.getElementById('unitSelect');
+        var packCountInput = document.getElementById('packCountInput');
+
+        /* نگاشت واحد → تعداد در بسته (مطابق تعریف unitOptions در PHP) */
+        var packByUnit = {
+            'جفتی': 1,
+            'بسته': 10,
+            'جین': 12
+        };
+
+        function syncPackCount() {
+            if (!unitSelect || !packCountInput) return;
+            var unit = unitSelect.value;
+            var n = packByUnit[unit];
+            if (typeof n !== 'undefined') {
+                packCountInput.value = n;
+            }
+        }
+
+        if (unitSelect && packCountInput) {
+            unitSelect.addEventListener('change', syncPackCount);
+            /* هم در بار اول (لود صفحه) همگام کن — مگر اینکه مقدار از DB آمده باشد */
+            syncPackCount();
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           ۲) فرمت‌بندی قیمت سه‌رقم سه‌رقم هنگام تایپ
+              (separating thousands with '.' for fa-IR display)
+              مقدار واقعی که به سرور می‌رود همان فیلد است ولی با نقطه.
+              سمت سرور همهٔ غیر-رقم‌ها را حذف می‌کند.
+           ═══════════════════════════════════════════════════════════ */
+
+        var priceInput = document.getElementById('basePriceInput');
+
+        function formatPrice(value) {
+            /* فقط ارقام را نگه می‌داریم */
+            var digits = String(value).replace(/[^\d]/g, '');
+            if (digits === '') return '';
+            /* حذف صفرهای ابتدایی (مگر اینکه خود عدد صفر باشد) */
+            digits = digits.replace(/^0+(?=\d)/, '');
+            if (digits === '') return '0';
+            /* سه‌رقم سه‌رقم از راست با نقطه جدا می‌کنیم */
+            return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        if (priceInput) {
+            /* مقدار اولیه را هم فرمت کن (در حالت ویرایش، از DB می‌آید) */
+            priceInput.value = formatPrice(priceInput.value);
+
+            priceInput.addEventListener('input', function() {
+                var oldStart = priceInput.selectionStart;
+                var oldLen = priceInput.value.length;
+                priceInput.value = formatPrice(priceInput.value);
+                var newLen = priceInput.value.length;
+                /* مکان‌نما را در همان جای منطقی نگه دار */
+                var diff = newLen - oldLen;
+                var newPos = Math.max(0, oldStart + diff);
+                try {
+                    priceInput.setSelectionRange(newPos, newPos);
+                } catch (e) {}
+            });
+
+            /* جلوگیری از وارد کردن حروف با کلیدهای چاپی */
+            priceInput.addEventListener('keypress', function(e) {
+                var allowedKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                    'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight',
+                    'Tab', 'Home', 'End', 'Enter'
+                ];
+                if (e.ctrlKey || e.metaKey || e.altKey) return;
+                if (allowedKeys.indexOf(e.key) === -1) {
+                    e.preventDefault();
+                }
+            });
+
+            /* جلوگیری از چسباندن متن غیرعددی */
+            priceInput.addEventListener('paste', function(e) {
+                e.preventDefault();
+                var text = (e.clipboardData || window.clipboardData).getData('text');
+                priceInput.value = formatPrice(text);
+            });
+        }
+
+        /* ═══════════════════════════════════════════════════════════
            پله‌های تخفیف — toggle
            ═══════════════════════════════════════════════════════════ */
 
@@ -1277,41 +1639,150 @@ ob_start();
         }
 
         /* ═══════════════════════════════════════════════════════════
-           به‌روزرسانی خودکار «مناسب برای» و «برند» با تغییر دسته
+           انتخاب هدایت‌شدهٔ دسته: کارت ریشه → dropdown زیرمجموعه
            ═══════════════════════════════════════════════════════════ */
 
-        var catSelect = document.querySelector('select[name="category_id"]');
+        var catSubSelect = document.getElementById('pfCatSubSelect');
+        var catSubWrap = document.getElementById('pfCatSubWrap');
+        var catChosen = document.getElementById('pfCatChosen');
+        var catChosenName = document.getElementById('pfCatChosenName');
+        var catReset = document.getElementById('pfCatReset');
+        var catRootBtns = document.querySelectorAll('.pf-cat-root');
+
         var specForField = document.getElementById('specForField');
         var brandField = document.querySelector('input[name="brand"]');
 
-        if (catSelect) {
+        /* داده از PHP: نقشهٔ parentId => [فرزندها] و نقشهٔ catId => نام ریشه */
+        var childCatsJs = <?= json_encode(
+                                array_map(function ($kids) {
+                                    return array_map(function ($k) {
+                                        $icon = (string)($k['icon'] ?? '');
+                                        if (substr($icon, 0, 9) === '/uploads/') $icon = '🧦';
+                                        return [
+                                            'id'    => (int)$k['id'],
+                                            'name'  => $k['name'],
+                                            'icon'  => $icon,
+                                            'image' => (string)($k['image_path'] ?? ''),
+                                        ];
+                                    }, $kids);
+                                }, $childCategories),
+                                JSON_UNESCAPED_UNICODE
+                            ) ?>;
 
-            var catRootMap = <?= json_encode($catRootMap, JSON_UNESCAPED_UNICODE) ?>;
-            var brandByRoot = <?= json_encode($brandDefaults, JSON_UNESCAPED_UNICODE) ?>;
+        var catRootMap = <?= json_encode($catRootMap, JSON_UNESCAPED_UNICODE) ?>;
+        var brandByRoot = <?= json_encode($brandDefaults, JSON_UNESCAPED_UNICODE) ?>;
 
-            catSelect.addEventListener('change', function() {
-                var catId = parseInt(catSelect.value, 10);
-                var rootName = catRootMap[catId] || '';
+        /* نام دستهٔ اصلی والد (برای نمایش «خودِ دستهٔ اصلی» در dropdown) */
+        var rootNameById = {};
+        catRootBtns.forEach(function(btn) {
+            rootNameById[parseInt(btn.dataset.rootId, 10)] = btn.dataset.rootName || '';
+        });
 
-                if (specForField) {
-                    specForField.value = rootName;
-                }
+        /* دستهٔ انتخاب‌شدهٔ فعلی (در حالت edit) از PHP می‌آید */
+        var currentCatId = <?= (int)($product['category_id'] ?? 0) ?>;
+        var currentParent = <?= (int)$currentCatParent ?>;
 
-                if (brandField) {
-                    var currentBrand = brandField.value.trim();
-                    var newBrand = brandByRoot[rootName] || '';
-                    var oldDefault = brandField.dataset.defaultBrand || '';
-
-                    if (currentBrand === '' || currentBrand === oldDefault) {
-                        brandField.value = newBrand;
-                    }
-                    brandField.dataset.defaultBrand = newBrand;
-                }
-            });
-
-            if (brandField) {
-                brandField.dataset.defaultBrand = brandField.value.trim();
+        /* ─── نمایش دستهٔ انتخاب‌شده در نوار پایین ─── */
+        function showChosen(catId) {
+            if (!catId) {
+                catChosen.style.display = 'none';
+                catChosenName.textContent = '';
+                return;
             }
+            var rootName = catRootMap[catId] || '';
+            var subSel = catSubSelect.querySelector('option[value="' + catId + '"]');
+            var subName = subSel ? subSel.textContent : '';
+            var display = subName ? (rootName + ' › ' + subName) : rootName;
+            catChosenName.textContent = display;
+            catChosen.style.display = 'flex';
+
+            /* به‌روزرسانی فیلدهای وابسته: «مناسب برای» و برند */
+            if (specForField) specForField.value = rootName;
+            if (brandField) {
+                var currentBrand = brandField.value.trim();
+                var newBrand = brandByRoot[rootName] || '';
+                var oldDefault = brandField.dataset.defaultBrand || '';
+                if (currentBrand === '' || currentBrand === oldDefault) {
+                    brandField.value = newBrand;
+                }
+                brandField.dataset.defaultBrand = newBrand;
+            }
+        }
+
+        /* ─── پاک کردن کامل انتخاب ─── */
+        function clearSelection() {
+            catSubSelect.value = '';
+            catSubSelect.innerHTML = '<option value="">— انتخاب کنید —</option>';
+            catSubWrap.style.display = 'none';
+            catChosen.style.display = 'none';
+            catRootBtns.forEach(function(b) {
+                b.classList.remove('is-selected');
+            });
+        }
+
+        /* ─── کلیک روی یک کارت ریشه ─── */
+        catRootBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var rootId = parseInt(btn.dataset.rootId, 10);
+                var rootName = btn.dataset.rootName || '';
+
+                /* فقط همین کارت را انتخاب‌شده نشان بده */
+                catRootBtns.forEach(function(b) {
+                    b.classList.remove('is-selected');
+                });
+                btn.classList.add('is-selected');
+
+                /* پر کردن dropdown زیرمجموعه با فرزندهای همین والد */
+                var kids = childCatsJs[rootId] || [];
+                var html = '<option value="">— انتخاب کنید —</option>';
+
+                /* گزینهٔ «خودِ دستهٔ اصلی» — یعنی محصول مستقیماً زیر والد ثبت شود */
+                html += '<option value="' + rootId + '">— خودِ دستهٔ اصلی («' + rootName + '») —</option>';
+
+                kids.forEach(function(k) {
+                    var label = (k.image ? '' : (k.icon ? k.icon + ' ' : '')) + k.name;
+                    html += '<option value="' + k.id + '">' + label + '</option>';
+                });
+
+                catSubSelect.innerHTML = html;
+                catSubWrap.style.display = 'flex';
+                catSubSelect.value = '';
+                catChosen.style.display = 'none';
+                catSubSelect.focus();
+            });
+        });
+
+        /* ─── تغییر در dropdown زیرمجموعه ─── */
+        if (catSubSelect) {
+            catSubSelect.addEventListener('change', function() {
+                showChosen(parseInt(catSubSelect.value, 10) || 0);
+            });
+        }
+
+        /* ─── دکمهٔ بازنشانی انتخاب ─── */
+        if (catReset) {
+            catReset.addEventListener('click', function() {
+                clearSelection();
+            });
+        }
+
+        /* ─── در حالت edit، اگر محصول دستهٔ انتخاب‌شده دارد، آن را فعال کن ─── */
+        if (currentCatId > 0) {
+            /* اگر دستهٔ فعلی خودش والد است (currentParent === 0)، کارت همان را انتخاب کن */
+            var targetRootId = currentParent > 0 ? currentParent : currentCatId;
+
+            var targetBtn = document.querySelector('.pf-cat-root[data-root-id="' + targetRootId + '"]');
+            if (targetBtn) {
+                targetBtn.click(); /* dropdown را با فرزندها پر می‌کند */
+                /* حالا مقدار صحیح را در dropdown بگذار */
+                catSubSelect.value = String(currentCatId);
+                showChosen(currentCatId);
+            }
+        }
+
+        /* برند پیش‌فرض اولیه */
+        if (brandField) {
+            brandField.dataset.defaultBrand = brandField.value.trim();
         }
 
         /* ═══════════════════════════════════════════════════════════

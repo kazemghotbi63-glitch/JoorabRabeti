@@ -1,7 +1,8 @@
 <?php
-/* [FILE] public/invoice-print.php — Invoice printable view */
 
 declare(strict_types=1);
+
+header('Content-Type: text/html; charset=UTF-8');
 
 $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
@@ -18,15 +19,12 @@ unset($__bp, $__b);
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once ROOT_PATH . '/app/services/InvoiceService.php';
-
 $db = db();
 
-$h = static fn($v): string =>
-htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+$h = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
 $moneyFa = static function ($amount): string {
     $formatted = number_format((int)$amount);
-    // تبدیل اعداد لاتین به فارسی
     $formatted = strtr($formatted, [
         '0' => '۰',
         '1' => '۱',
@@ -38,7 +36,7 @@ $moneyFa = static function ($amount): string {
         '7' => '۷',
         '8' => '۸',
         '9' => '۹',
-        ',' => '٬',  // جداکننده هزارگان فارسی
+        ',' => '٬',
     ]);
     return $formatted . ' تومان';
 };
@@ -165,27 +163,27 @@ if (!$isAdmin && $invoiceUserId !== $userId) {
 $invoiceId = (int)($invoice['invoice_id'] ?? $invoice['id'] ?? 0);
 
 /* ═══ تاریخچه پرداخت ═══ */
-$paymentStmt = $db->prepare("
-    SELECT
-        ps.id, ps.method, ps.claimed_amount, ps.reference_no,
-        ps.receipt_path, ps.transaction_date, ps.status, ps.created_at,
-        v.verified_amount, v.status AS verification_status,
-        v.note AS verification_note, v.verified_at
-    FROM payment_submissions ps
-    LEFT JOIN payment_verifications v ON v.payment_submission_id = ps.id
-    WHERE ps.invoice_id = ?
-    ORDER BY ps.created_at ASC, ps.id ASC
+$paymentStmt = $db->prepare("  
+    SELECT  
+        ps.id, ps.method, ps.claimed_amount, ps.reference_no,  
+        ps.receipt_path, ps.transaction_date, ps.status, ps.created_at,  
+        v.verified_amount, v.status AS verification_status,  
+        v.note AS verification_note, v.verified_at  
+    FROM payment_submissions ps  
+    LEFT JOIN payment_verifications v ON v.payment_submission_id = ps.id  
+    WHERE ps.invoice_id = ?  
+    ORDER BY ps.created_at ASC, ps.id ASC  
 ");
 $paymentStmt->execute([$invoiceId]);
 $payments = $paymentStmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* ═══ اسناد بازگشت وجه ═══ */
 $refunds = [];
-$stmt = $db->prepare("
-    SELECT ft.amount, ft.method, ft.document_no, ft.reference_no, ft.completed_at
-    FROM financial_transactions ft
-    WHERE ft.invoice_id = ? AND ft.type = 'creditor_settlement' AND ft.status = 'completed'
-    ORDER BY ft.completed_at ASC
+$stmt = $db->prepare("  
+    SELECT ft.amount, ft.method, ft.document_no, ft.reference_no, ft.completed_at  
+    FROM financial_transactions ft  
+    WHERE ft.invoice_id = ? AND ft.type = 'creditor_settlement' AND ft.status = 'completed'  
+    ORDER BY ft.completed_at ASC  
 ");
 $stmt->execute([$invoiceId]);
 $refunds = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -221,17 +219,15 @@ $invoiceDate = (string)($invoice['order_created_at'] ?? $invoice['issued_at'] ??
 
 $invoiceStatus = (string)($invoice['status'] ?? 'unpaid');
 
-// ⭐ خریدار = کاربر (نه گیرنده)
-
-/* ⭐ خریدار (از users) — صاحب فاکتور */
+/* ─ خریدار (از users) — صاحب فاکتور */
 $buyerName        = (string)($invoice['buyer_full_name'] ?? '—');
 $buyerMobile      = (string)($invoice['buyer_mobile'] ?? '—');
 $buyerNational    = (string)($invoice['buyer_national_code'] ?? '');
 $buyerEconomic    = (string)($invoice['buyer_economic_code'] ?? '');
 $buyerCompany     = (string)($invoice['buyer_company'] ?? '');
-$buyerType        = (string)($invoice['buyer_type'] ?? 'real');  // real | legal
+$buyerType        = (string)($invoice['buyer_type'] ?? 'real');  // real | legal  
 
-/* ⭐ گیرنده (از orders) — فقط برای ارسال */
+/* ─ گیرنده (از orders) — فقط برای ارسال */
 $receiverName     = (string)($invoice['shipping_name'] ?? '');
 $receiverMobile   = (string)($invoice['shipping_mobile'] ?? '');
 $receiverProvince = (string)($invoice['shipping_province'] ?? '');
@@ -241,7 +237,7 @@ $receiverPostal   = (string)($invoice['shipping_postal'] ?? '');
 $customerNote     = (string)($invoice['customer_note'] ?? $invoice['note'] ?? '');
 
 $subtotal = (int)($totals['subtotal'] ?? 0);
-$discount = (int)($totals['discount'] ?? 0);       // ⭐ اضافه شد
+$discount = (int)($totals['discount'] ?? 0);
 $shipping = (int)($totals['shipping'] ?? 0);
 $tax      = (int)($totals['tax'] ?? 0);
 $total    = (int)($totals['total'] ?? 0);
@@ -264,7 +260,7 @@ $canPay = !$hasPendingPayment
     && $invoiceStatus !== 'void';
 
 $logoPath = '/Image/logo3.jpg';
-$siteUrl  = 'https://JorabRabeti.ir';
+$siteUrl  = 'https://joorabrabeti.ir';
 
 $itemsCount = 0;
 foreach ($items as $item) $itemsCount += (int)($item['qty'] ?? 0);
@@ -281,39 +277,38 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
     <title>فاکتور <?= $h($invoiceNo) ?> | رابطی</title>
 
     <style>
-        /* ═══════════════════════════════════════════════════════════════
-       Invoice Print — v2 (پاک‌سازی‌شده)
-       ─────────────────────────────────────────────────────────────
-       • حذف .buyer-line* (استفاده نمی‌شود — از .party-row-split استفاده می‌کنیم)
-       • یکپارچه‌سازی @media print و @media (max-width: 640px)
-       • حذف تکرار .receiver-line و .party-row-split
-       • همه استایل‌های فعال در جای درست
-    ═══════════════════════════════════════════════════════════════ */
-
-        /* ─── Reset ─── */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        :root {
+            --ink: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --soft: #f9fafb;
+            --accent: #2a5f78;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
         }
 
-        body {
-            font-family: Tahoma, Arial, sans-serif;
-            font-size: 13px;
-            line-height: 1.7;
-            color: #1f2937;
+        body.invoice-page {
+            font-family: Tahoma, "Vazirmatn", sans-serif;
             background: #f2f3f5;
-            padding: 20px;
-            direction: rtl;
+            color: var(--ink);
+            font-size: 13px;
+            margin: 0;
+            padding: 24px 12px;
         }
 
-        /* ─── Actions (دکمه‌های بالا) ─── */
+        .ltr {
+            direction: ltr;
+            unicode-bidi: plaintext;
+        }
+
+        /* ─── Toolbar ─── */
         .invoice-actions {
-            max-width: 900px;
-            margin: 0 auto 15px;
+            width: min(820px, 100%);
+            margin: 0 auto 14px;
             display: flex;
             justify-content: space-between;
-            gap: 10px;
+            gap: 8px;
         }
 
         .actions-right,
@@ -323,60 +318,54 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
         }
 
         .action-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 10px 18px;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--line);
             background: #fff;
-            color: #1f2937;
+            color: var(--ink);
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 12px;
             font-family: inherit;
-            font-size: 13px;
-            font-weight: 700;
-            text-decoration: none;
             cursor: pointer;
-            transition: all .15s;
+            text-decoration: none;
+            white-space: nowrap;
         }
 
         .action-btn:hover {
-            background: #f9fafb;
+            border-color: var(--ink);
         }
 
-        .action-print,
-        .action-pdf {
-            background: #2a5f78;
+        .action-print-a4 {
+            background: var(--ink);
+            border-color: var(--ink);
             color: #fff;
-            border-color: #2a5f78;
-        }
-
-        .action-print:hover,
-        .action-pdf:hover {
-            background: #1f4a5e;
         }
 
         /* ─── Sheet ─── */
         .invoice-sheet {
-            max-width: 900px;
+            width: min(820px, 100%);
             margin: 0 auto;
             background: #fff;
+            border: 1px solid var(--line);
             border-radius: 12px;
-            padding: 30px 35px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, .06);
+            overflow: hidden;
+        }
+
+        .invoice-content {
+            padding: 0 28px 24px;
         }
 
         /* ─── Header ─── */
         .invoice-header {
-            padding-bottom: 20px;
-            border-bottom: 2px solid #2a5f78;
-            margin-bottom: 22px;
+            padding: 24px 28px 0;
         }
 
         .invoice-header-top {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            gap: 16px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--ink);
         }
 
         .brand-block {
@@ -386,33 +375,27 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
         }
 
         .brand-logo {
-            width: 60px;
-            height: 60px;
-            border-radius: 10px;
-            object-fit: cover;
-            border: 1px solid #e5e7eb;
+            width: 52px;
+            height: 52px;
+            object-fit: contain;
         }
 
-        .brand-text h1,
         .brand-name {
             font-size: 20px;
-            font-weight: 900;
-            color: #2a5f78;
-            margin-bottom: 3px;
+            font-weight: 800;
         }
 
         .brand-subtitle {
             font-size: 11px;
-            color: #6b7280;
+            color: var(--muted);
+            margin-top: 2px;
         }
 
         .brand-site-url {
-            font-size: 11px;
-            color: #2a5f78;
-            font-weight: 700;
+            font-size: 10px;
+            color: var(--muted);
             direction: ltr;
             text-align: right;
-            margin-top: 3px;
         }
 
         .invoice-title {
@@ -421,613 +404,398 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
 
         .invoice-title-label {
             font-size: 11px;
-            color: #6b7280;
-            margin-bottom: 4px;
+            color: var(--muted);
         }
 
         .invoice-title-number {
             font-size: 16px;
             font-weight: 800;
-            color: #2a5f78;
             direction: ltr;
-            text-align: left;
         }
 
         .invoice-meta {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            margin-top: 18px;
+            padding: 14px 0;
         }
 
         .meta-card {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
+            background: var(--soft);
             border-radius: 8px;
-            padding: 10px 12px;
+            padding: 8px 12px;
         }
 
         .meta-label {
             display: block;
             font-size: 10px;
-            color: #6b7280;
-            margin-bottom: 3px;
+            color: var(--muted);
+            margin-bottom: 2px;
         }
 
         .meta-value {
-            display: block;
             font-size: 12px;
-            font-weight: 700;
-            color: #1f2937;
         }
 
-        .meta-value.ltr {
-            direction: ltr;
-            text-align: left;
-        }
-
-        /* ─── Parties (خریدار / فروشنده) ─── */
+        /* ─── Parties ─── */
         .parties {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            gap: 12px;
             margin-bottom: 16px;
         }
 
         .party-card {
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--line);
             border-radius: 10px;
-            padding: 14px 16px;
-            background: #f9fafb;
+            padding: 12px 14px;
         }
 
         .party-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed #d1d5db;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--line);
         }
 
         .party-title {
             font-size: 12px;
             font-weight: 800;
-            color: #2a5f78;
+            color: var(--accent);
         }
 
-        .party-badge {
-            font-size: 10px;
-            font-weight: 700;
-            color: #fff;
-            background: #2a5f78;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-
-        .seller-badge {
-            background: #6b7280;
-        }
-
-        /* ─── ردیف معمولی (موبایل، شرکت، ...) ─── */
-        .party-row {
-            display: flex;
-            gap: 8px;
-            font-size: 12px;
-            margin-bottom: 5px;
-        }
-
-        .party-row-label {
-            color: #6b7280;
-            min-width: 55px;
-        }
-
-        .party-row-value {
-            color: #1f2937;
-            font-weight: 600;
-            flex: 1;
-        }
-
-        .party-row-value.ltr {
-            direction: ltr;
-        }
-
-        .party-address {
-            line-height: 1.6;
-        }
-
-        /* ─── ردیف نصف‌نصف (نام + کد ملی) ─── */
+        .party-row,
         .party-row-split {
             display: flex;
-            gap: 12px;
-            margin-bottom: 5px;
+            gap: 10px;
+            padding: 3px 0;
             font-size: 12px;
-            width: 100%;
+        }
+
+        .party-row-split {
+            justify-content: space-between;
         }
 
         .party-row-half {
-            flex: 1 1 50%;
             display: flex;
             gap: 6px;
-            min-width: 0;
+            flex: 1;
         }
 
-        .party-row-half .party-row-label {
-            color: #6b7280;
-            min-width: 40px;
-            flex-shrink: 0;
-            font-size: 12px;
+        .party-row-label {
+            color: var(--muted);
+            font-size: 11px;
+            min-width: 52px;
         }
 
-        .party-row-half .party-row-value {
-            color: #1f2937;
+        .party-row-value {
             font-weight: 600;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
-        .party-row-half .party-row-value.ltr {
-            direction: ltr;
-        }
-
-        /* ─── گیرنده (یک خط زیر دو ستون) ─── */
         .receiver-line {
-            background: #f0f9ff;
-            border: 1px dashed #7dd3fc;
-            border-radius: 10px;
-            padding: 10px 16px;
-            margin-bottom: 22px;
-            font-size: 12px;
-            color: #075985;
-            line-height: 1.8;
+            background: var(--soft);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 11px;
+            margin-bottom: 16px;
+            line-height: 1.9;
         }
 
-        .receiver-line strong {
-            color: #0369a1;
-            margin-left: 4px;
-        }
-
-        /* ─── Section title ─── */
+        /* ─── Sections ─── */
         .section-title {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 800;
-            color: #2a5f78;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid #e5e7eb;
+            color: var(--accent);
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--line);
         }
 
-        /* ─── Products table ─── */
+        .products-section,
+        .payment-section {
+            margin-bottom: 18px;
+        }
+
+        /* ─── Items table ─── */
         .products-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
-            margin-bottom: 22px;
         }
 
         .products-table th {
-            background: #f8fafc;
-            padding: 10px 8px;
-            text-align: right;
+            background: var(--soft);
+            font-size: 10px;
+            color: var(--muted);
             font-weight: 700;
-            color: #374151;
-            border-bottom: 1px solid #e5e7eb;
+            padding: 7px 8px;
+            border-bottom: 1px solid var(--line);
+            text-align: right;
         }
 
         .products-table td {
-            padding: 10px 8px;
-            border-bottom: 1px solid #f3f4f6;
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 12px;
             vertical-align: middle;
         }
 
-        .products-table td.center {
+        .products-table .center {
             text-align: center;
         }
 
-        .products-table td.ltr {
-            direction: ltr;
-            text-align: left;
-        }
-
         .item-thumb {
-            width: 75px;
-            height: 75px;
+            width: 44px;
+            height: 44px;
             object-fit: cover;
             border-radius: 6px;
-            border: 1px solid #e5e7eb;
-            background: #f9fafb;
-            display: block;
+            border: 1px solid var(--line);
         }
 
         .item-thumb-empty {
-            width: 75px;
-            height: 75px;
+            width: 44px;
+            height: 44px;
+            margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            background: #f9fafb;
+            background: var(--soft);
             border-radius: 6px;
-            border: 1px solid #e5e7eb;
+            font-size: 18px;
         }
 
         .product-name {
             font-weight: 700;
-            color: #1f2937;
         }
 
         .product-code {
             font-size: 10px;
-            color: #9ca3af;
-            margin-top: 2px;
+            color: var(--muted);
+            direction: ltr;
+            text-align: right;
         }
 
-        /* ─── Payment history ─── */
-        .payment-section {
-            margin-bottom: 22px;
-        }
-
-        .payment-history {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
+        /* ─── Payments ─── */
         .payment-item {
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 12px 14px;
-            background: #f9fafb;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            font-size: 12px;
         }
 
         .payment-item-main {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
         }
 
         .payment-method {
             font-weight: 700;
-        }
-
-        .payment-status {
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            margin-right: 8px;
-            background: #e5e7eb;
-        }
-
-        .payment-status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .payment-status-verified,
-        .payment-status-confirmed {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .payment-status-rejected {
-            background: #fee2e2;
-            color: #991b1b;
+            margin-left: 8px;
         }
 
         .payment-item-amount {
-            font-weight: 900;
-            color: #2a5f78;
+            font-weight: 800;
+        }
+
+        .payment-status {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .payment-status-verified,
+        .payment-status-confirmed,
+        .payment-status-adjusted {
+            background: #eaf7ef;
+            color: var(--success);
+        }
+
+        .payment-status-pending {
+            background: #fff7df;
+            color: var(--warning);
+        }
+
+        .payment-status-rejected {
+            background: #fff0ee;
+            color: var(--danger);
         }
 
         .payment-item-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px 20px;
+            gap: 14px;
             margin-top: 8px;
-            font-size: 11px;
-            color: #6b7280;
+            padding-top: 7px;
+            border-top: 1px dashed var(--line);
+            font-size: 10px;
+            color: var(--muted);
         }
 
         .payment-meta-label {
-            color: #9ca3af;
+            font-weight: 700;
+            margin-left: 3px;
         }
 
-        /* ─── Bottom (نتیجه مالی + خلاصه) ─── */
+        /* ─── Bottom ─── */
         .invoice-bottom {
             display: grid;
-            grid-template-columns: 1fr 380px;
+            grid-template-columns: 1fr 300px;
             gap: 20px;
-            margin-top: 10px;
+            align-items: start;
         }
 
         .note-box {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 12px 14px;
+            font-size: 11px;
+            color: var(--muted);
             margin-bottom: 12px;
-            font-size: 12px;
         }
 
         .note-box-title {
-            font-size: 11px;
-            font-weight: 700;
-            color: #6b7280;
-            margin-bottom: 6px;
+            font-weight: 800;
+            color: var(--ink);
+            margin-bottom: 4px;
         }
 
         .reconciliation-box {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--line);
             border-radius: 10px;
             padding: 12px 14px;
-            font-size: 12px;
+            margin-bottom: 10px;
         }
 
         .reconciliation-title {
             font-size: 11px;
-            font-weight: 700;
-            color: #6b7280;
-            margin-bottom: 8px;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 6px;
         }
 
         .reconciliation-result,
         .reconciliation-amount {
             display: flex;
             justify-content: space-between;
-            padding: 4px 0;
-        }
-
-        .reconciliation-result strong,
-        .reconciliation-amount strong {
-            font-weight: 900;
+            font-size: 12px;
+            padding: 2px 0;
         }
 
         .items-summary {
             display: flex;
             justify-content: space-between;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-size: 12px;
-            margin-top: 10px;
+            font-size: 11px;
+            color: var(--muted);
         }
 
-        /* ─── Totals ─── */
         .totals-box {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--line);
             border-radius: 10px;
-            padding: 16px 20px;
-            height: fit-content;
+            padding: 14px 16px;
+            background: var(--soft);
         }
 
         .totals-head {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 800;
-            color: #2a5f78;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 8px;
         }
 
         .total-row {
             display: flex;
             justify-content: space-between;
-            padding: 6px 0;
+            gap: 12px;
+            padding: 4px 0;
             font-size: 12px;
         }
 
-        .grand-total {
-            border-top: 2px solid #2a5f78;
-            margin-top: 8px;
-            padding-top: 10px;
-            font-size: 15px;
+        .total-row.grand-total {
+            border-top: 2px solid var(--ink);
+            margin-top: 6px;
+            padding-top: 8px;
+            font-size: 14px;
             font-weight: 900;
-            color: #2a5f78;
         }
 
-        .paid-row {
-            color: #059669;
-        }
-
-        .pending-row {
-            color: #d97706;
-        }
-
-        .remaining-row,
         .refund-row {
-            color: #dc2626;
+            color: var(--danger);
         }
 
         /* ─── Footer ─── */
         .invoice-footer {
-            margin-top: 30px;
-            padding-top: 16px;
-            border-top: 1px solid #e5e7eb;
-            font-size: 11px;
-            color: #6b7280;
+            padding: 12px 28px;
+            border-top: 1px solid var(--line);
+            font-size: 10px;
+            color: var(--muted);
             text-align: center;
         }
 
-        .invoice-footer .site-url {
-            color: #2a5f78;
-            font-weight: 700;
+        .site-url {
             direction: ltr;
-            display: inline-block;
+            unicode-bidi: plaintext;
         }
 
-        /* ═══════════════════════════════════════════════════════════════
-       Responsive — موبایل (ساختار حفظ، اندازه‌ها کوچک‌تر)
-    ═══════════════════════════════════════════════════════════════ */
+        /* ─── Mobile ─── */
         @media (max-width: 640px) {
-            body {
-                padding: 10px;
-                font-size: 12px;
+            body.invoice-page {
+                padding: 10px 6px;
             }
 
-            .invoice-sheet {
-                padding: 18px 14px;
-                border-radius: 8px;
+            .invoice-actions {
+                flex-wrap: wrap;
             }
 
-            /* دو ستون خریدار/فروشنده → یک ستون */
-            .parties {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-
-            .party-card {
-                padding: 10px 12px;
-            }
-
-            .party-title {
-                font-size: 11px;
-            }
-
-            .party-badge {
-                font-size: 9px;
-            }
-
-            .party-row,
-            .party-row-split {
-                font-size: 11px;
-                gap: 8px;
-                margin-bottom: 4px;
-            }
-
-            .party-row-label {
-                min-width: 45px;
-                font-size: 10px;
-            }
-
-            .party-row-half .party-row-label {
-                min-width: 35px;
-                font-size: 10px;
-            }
-
-            .receiver-line {
-                padding: 8px 12px;
-                font-size: 11px;
-                line-height: 1.7;
-            }
-
-            .products-table {
-                font-size: 10px;
-            }
-
-            .products-table th,
-            .products-table td {
-                padding: 6px 4px;
-            }
-
-            .item-thumb,
-            .item-thumb-empty {
-                width: 48px;
-                height: 48px;
-                font-size: 18px;
-            }
-
-            .product-name {
-                font-size: 11px;
-            }
-
-            .product-code {
-                font-size: 9px;
-            }
-
-            .invoice-header-top {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            .invoice-title {
-                text-align: right;
+            .actions-right {
                 width: 100%;
+            }
+
+            .actions-right .action-btn {
+                flex: 1;
+                text-align: center;
+            }
+
+            .invoice-header,
+            .invoice-content {
+                padding-left: 14px;
+                padding-right: 14px;
             }
 
             .invoice-meta {
                 grid-template-columns: 1fr;
-                gap: 8px;
             }
 
-            .brand-name {
-                font-size: 16px;
-            }
-
-            .brand-logo {
-                width: 44px;
-                height: 44px;
-            }
-
+            .parties,
             .invoice-bottom {
                 grid-template-columns: 1fr;
-                gap: 14px;
-            }
-
-            .totals-box {
-                padding: 12px 14px;
-            }
-
-            .total-row {
-                font-size: 11px;
-                padding: 5px 0;
-            }
-
-            .grand-total {
-                font-size: 13px;
-            }
-
-            .payment-item {
-                padding: 10px 12px;
-            }
-
-            .payment-item-main {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
-            }
-
-            .payment-item-amount {
-                font-size: 13px;
-            }
-
-            .payment-item-meta {
-                font-size: 10px;
-                gap: 6px 12px;
-            }
-
-            .invoice-actions {
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .actions-right,
-            .actions-left {
-                width: 100%;
-            }
-
-            .action-btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .invoice-footer {
-                font-size: 9px;
-                line-height: 1.7;
             }
         }
 
-        /* ═══════════════════════════════════════════════════════════════
-       Print — A4
-    ═══════════════════════════════════════════════════════════════ */
+        /* ════════════════════════════════════════════  
+   چاپ — A4 لیزری + حرارتی ۸۰mm  
+   ════════════════════════════════════════════ */
+
+        /* کاغذ A4 — پیش‌فرض */
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+
+        /* کاغذ حرارتی — فقط وقتی invoice-sheet داخل body.thermal-print باشد */
+        @page thermal {
+            size: 80mm auto;
+            margin: 2mm;
+        }
+
         @media print {
+
+            html,
             body {
-                background: #fff;
-                padding: 0;
+                background: #fff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            body.invoice-page {
                 font-size: 11px;
             }
 
@@ -1036,66 +804,179 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
             }
 
             .invoice-sheet {
-                max-width: 100%;
-                box-shadow: none;
+                width: 100%;
+                border: 0;
                 border-radius: 0;
-                padding: 15px 20px;
+                box-shadow: none;
             }
 
-            .invoice-header {
-                padding-bottom: 15px;
-                margin-bottom: 18px;
+            .item-thumb {
+                width: 34px;
+                height: 34px;
             }
 
-            .brand-text h1,
-            .brand-name {
-                font-size: 18px;
+            .party-card,
+            .payment-item,
+            .totals-box,
+            .reconciliation-box,
+            tr {
+                break-inside: avoid;
             }
 
-            .invoice-title-number {
-                font-size: 14px;
+            .products-table thead {
+                display: table-header-group;
             }
 
-            .products-table th,
-            .products-table td {
-                padding: 6px 5px;
+            /* ─── حالت حرارتی ۸۰mm ─── */
+            body.thermal-print {
+                width: auto;
                 font-size: 10px;
             }
 
-            .item-thumb,
-            .item-thumb-empty {
-                width: 75px;
-                height: 75px;
+            body.thermal-print .invoice-sheet {
+                page: thermal;
+                width: 76mm;
             }
 
-            .totals-box {
-                padding: 12px 16px;
+            body.thermal-print .invoice-header,
+            body.thermal-print .invoice-content,
+            body.thermal-print .invoice-footer {
+                padding-left: 2mm;
+                padding-right: 2mm;
             }
 
-            .total-row {
-                font-size: 11px;
+            /* هدر وسط‌چین */
+            body.thermal-print .invoice-header-top {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 6px;
+                border-bottom: 1px dashed #999;
+            }
+
+            body.thermal-print .invoice-title {
+                text-align: center;
+            }
+
+            body.thermal-print .brand-logo {
+                width: 36px;
+                height: 36px;
+            }
+
+            body.thermal-print .brand-name {
+                font-size: 14px;
+            }
+
+            /* متا — خطی */
+            body.thermal-print .invoice-meta {
+                grid-template-columns: 1fr;
+                gap: 4px;
+                padding: 8px 0;
+            }
+
+            body.thermal-print .meta-card {
+                background: none;
+                padding: 2px 0;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            body.thermal-print .meta-label {
+                margin: 0;
+            }
+
+            /* طرفین — تک‌ستونه با جداکننده خط‌چین */
+            body.thermal-print .parties {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            body.thermal-print .party-card {
+                border: 0;
+                border-top: 1px dashed #999;
+                border-radius: 0;
+                padding: 6px 0;
+            }
+
+            body.thermal-print .party-head {
+                border-bottom: 0;
+                margin-bottom: 4px;
+                padding-bottom: 0;
+            }
+
+            body.thermal-print .receiver-line {
+                background: none;
                 padding: 4px 0;
+                border-top: 1px dashed #999;
+                border-radius: 0;
             }
 
-            .grand-total {
-                font-size: 13px;
+            /* جدول اقلام — بدون ستون تصویر */
+            body.thermal-print .products-table th:nth-child(1),
+            body.thermal-print .products-table td:nth-child(1) {
+                display: none;
             }
 
-            .invoice-footer {
-                margin-top: 20px;
-                font-size: 9px;
+            body.thermal-print .products-table th,
+            body.thermal-print .products-table td {
+                padding: 3px 2px;
+                font-size: 10px;
             }
 
-            @page {
-                size: A4;
-                margin: 10mm;
+            body.thermal-print .products-table th {
+                background: none;
+                border-bottom: 1px solid #000;
             }
 
-            tr,
-            .party-card,
-            .totals-box,
-            .payment-item {
-                break-inside: avoid;
+            /* پرداخت‌ها */
+            body.thermal-print .payment-item {
+                border: 0;
+                border-top: 1px dashed #999;
+                border-radius: 0;
+                padding: 5px 0;
+            }
+
+            body.thermal-print .payment-status {
+                background: none;
+                padding: 0;
+            }
+
+            body.thermal-print .payment-item-meta {
+                border-top: 0;
+                margin-top: 4px;
+                padding-top: 0;
+            }
+
+            /* بخش پایانی — تک‌ستونه */
+            body.thermal-print .invoice-bottom {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            body.thermal-print .totals-box {
+                background: none;
+                border: 0;
+                border-top: 1px dashed #999;
+                border-radius: 0;
+                padding: 6px 0;
+            }
+
+            body.thermal-print .reconciliation-box {
+                border: 0;
+                border-top: 1px dashed #999;
+                border-radius: 0;
+                padding: 6px 0;
+            }
+
+            body.thermal-print .total-row.grand-total {
+                border-top: 1px solid #000;
+            }
+
+            /* سیاه‌وسفید خالص برای پرینتر حرارتی */
+            body.thermal-print * {
+                color: #000 !important;
+                background: none !important;
+                box-shadow: none !important;
             }
         }
     </style>
@@ -1105,7 +986,14 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
 
     <div class="invoice-actions">
         <div class="actions-right">
-            <button type="button" class="action-btn action-print" onclick="window.print()">🖨 چاپ</button>
+            <!-- دکمه چاپ A4 (لیزری) -->
+            <button type="button" class="action-btn action-print-a4" onclick="window.print()">
+                🖨 چاپ A4 (لیزری)
+            </button>
+            <!-- دکمه چاپ حرارتی 80mm -->
+            <button type="button" class="action-btn action-print-thermal" onclick="printThermal()">
+                🧾 چاپ حرارتی (80mm)
+            </button>
             <a href="/invoice-pdf.php?inv=<?= rawurlencode($invoiceNo) ?>" class="action-btn action-pdf">📄 دریافت PDF</a>
         </div>
         <div class="actions-left">
@@ -1147,18 +1035,17 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                 </div>
             </div>
         </header>
-
         <div class="invoice-content">
 
             <!-- Parties -->
             <section class="parties">
-                <!-- ═══ خریدار ═══ -->
+                <!-- ─── خریدار ─── -->
                 <div class="party-card">
                     <div class="party-head">
                         <div class="party-title">خریدار</div>
                     </div>
 
-                    <!-- ⭐ خط ۱: نام (نصف چپ) + کد ملی (نصف راست) -->
+                    <!-- خط ۱: نام (نصف چپ) + کد ملی (نصف راست) -->
                     <div class="party-row-split">
                         <div class="party-row-half">
                             <span class="party-row-label">نام</span>
@@ -1170,14 +1057,13 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                         </div>
                     </div>
 
-                    <!-- ⭐ خط ۲: موبایل -->
+                    <!-- خط ۲: موبایل -->
                     <div class="party-row">
                         <span class="party-row-label">موبایل</span>
                         <strong class="party-row-value ltr"><?= $h($buyerMobile) ?></strong>
                     </div>
 
-
-                    <!-- ⭐ خط ۳: شرکت (اگر هست) -->
+                    <!-- خط ۳: شرکت (اگر هست) -->
                     <?php if ($buyerCompany !== ''): ?>
                         <div class="party-row">
                             <span class="party-row-label">شرکت</span>
@@ -1185,7 +1071,7 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                         </div>
                     <?php endif; ?>
 
-                    <!-- ⭐ خط ۴: کد اقتصادی (اگر هست) -->
+                    <!-- خط ۴: کد اقتصادی (اگر هست) -->
                     <?php if ($buyerEconomic !== ''): ?>
                         <div class="party-row">
                             <span class="party-row-label">کد اقتصادی</span>
@@ -1194,7 +1080,7 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                     <?php endif; ?>
                 </div>
 
-                <!-- ═══ فروشنده ═══ -->
+                <!-- ─── فروشنده ─── -->
                 <div class="party-card seller-card">
                     <div class="party-head">
                         <div class="party-title">فروشنده</div>
@@ -1214,7 +1100,7 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                 </div>
             </section>
 
-            <!-- ═══ گیرنده — یک خط زیر دو ستون ═══ -->
+            <!-- ─── گیرنده — یک خط زیر دو ستون ─── -->
             <?php if ($receiverName !== '' || $receiverAddress !== ''): ?>
                 <?php
                 $receiverParts = [];
@@ -1257,16 +1143,14 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                                 $itemImage   = (string)($item['image'] ?? '');
                             ?>
                                 <tr>
-                                    <td class="center">
+                                    <td class="center" data-label="تصویر">
                                         <?php if ($itemImage !== ''): ?>
-                                            <img src="<?= $h($itemImage) ?>"
-                                                alt="<?= $h($productName) ?>"
-                                                class="item-thumb">
+                                            <img src="<?= $h($itemImage) ?>" alt="<?= $h($productName) ?>" class="item-thumb">
                                         <?php else: ?>
                                             <div class="item-thumb-empty">🧦</div>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td data-label="محصول">
                                         <div class="product-name"><?= $h($productName) ?></div>
                                         <?php if ($productCode !== ''): ?>
                                             <div class="product-code">کد: <?= $h($productCode) ?></div>
@@ -1296,9 +1180,9 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                             $paymentStatus   = (string)($payment['status'] ?? '');
                             $paymentMethod   = (string)($payment['method'] ?? '');
                             $claimed         = (int)$payment['_claimed'];
-                            $verified        = $payment['_verified'];  // null اگر pending
+                            $verified        = $payment['_verified'];
                             $hasMismatch     = ($verified !== null && $verified !== $claimed);
-                            $displayAmount   = $verified ?? $claimed;  // اگر verified هست، آن را؛ وگرنه claimed
+                            $displayAmount   = $verified ?? $claimed;
                             ?>
                             <article class="payment-item">
                                 <div class="payment-item-main">
@@ -1312,7 +1196,7 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                                         <?= $moneyFa($displayAmount) ?>
                                         <?php if ($verified === null): ?>
                                             <small style="display:block;font-size:10px;color:#92400e;font-weight:400;">
-                                                (ادعا — در انتظار تأیید)
+                                                (در انتظار تأیید)
                                             </small>
                                         <?php endif; ?>
                                     </div>
@@ -1380,8 +1264,7 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
 
                     <?php if ($itemsCount > 0): ?>
                         <div class="items-summary">
-                            <span>تعداد کل اقلام:</span>
-                            <strong><?= number_format($itemsCount) ?> <?= htmlspecialchars(unit_label($items[0]['unit_code'] ?? 'جفتی')) ?></strong>
+
                         </div>
                     <?php endif; ?>
                 </div>
@@ -1389,7 +1272,7 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                 <div class="totals-box">
                     <div class="totals-head">خلاصه مالی</div>
 
-                    <!-- ═══ اقلام و تخفیف ═══ -->
+                    <!-- ─── اقلام و تخفیف ─── -->
                     <div class="total-row">
                         <span>جمع اقلام:</span>
                         <strong><?= $moneyFa($subtotal) ?></strong>
@@ -1419,7 +1302,7 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                         <span><?= $moneyFa($total) ?></span>
                     </div>
 
-                    <!-- ═══ جمع پرداخت‌ها با تفکیک ═══ -->
+                    <!-- ─── جمع پرداخت‌ها با تفکیک ─── -->
                     <?php
                     $sumVerified = 0;
                     $sumPending  = 0;
@@ -1469,7 +1352,7 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                         </div>
                     <?php endif; ?>
 
-                    <!-- ═══ مانده (بر اساس verified) ═══ -->
+                    <!-- ─── مانده (بر اساس verified) ─── -->
                     <?php
                     $effectivePaid = $sumVerified;
                     $remainingCalc = $total - $effectivePaid;
@@ -1489,13 +1372,13 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                     }
                     ?>
 
-                    <div class="total-row" style="
-        border-top:2px solid #2a5f78;
-        margin-top:10px;
-        padding-top:10px;
-        font-weight:900;
-        font-size:14px;
-        color:<?= $recColor ?>;
+                    <div class="total-row" style="  
+        border-top:2px solid #2a5f78;  
+        margin-top:10px;  
+        padding-top:10px;  
+        font-weight:900;  
+        font-size:14px;  
+        color:<?= $recColor ?>;  
     ">
                         <span><?= $recTypeCalc === 'بستانکار' ? 'بستانکاری:' : ($recTypeCalc === 'بدهکار' ? 'مانده بدهی:' : 'مانده:') ?></span>
                         <strong><?= $moneyFa($recAmountCalc) ?></strong>
@@ -1507,13 +1390,23 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
 
         <!-- Footer -->
         <div class="invoice-footer">
-            تعداد کل: <?= number_format($itemsCount) ?> <?= htmlspecialchars(unit_label($items[0]['unit_code'] ?? 'جفتی')) ?> |
             تولیدی جوراب رابطی |
             <span class="site-url"><?= $h($siteUrl) ?></span>
         </div>
 
     </main>
-
+    <script>
+        function printThermal() {
+            // اضافه کردن کلاس thermal-print به body  
+            document.body.classList.add('thermal-print');
+            // باز کردن پنجره چاپ  
+            window.print();
+            // حذف کلاس بعد از بستن پنجره چاپ  
+            window.onafterprint = function() {
+                document.body.classList.remove('thermal-print');
+            };
+        }
+    </script>
 </body>
 
 </html>

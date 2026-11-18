@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-/* ═══════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
  *  RABETI — PDF فاکتور  |  v2 | 2026-10-23
  *
  *  تغییرات:
@@ -12,7 +12,7 @@ declare(strict_types=1);
  *    • تخفیف + هزینه ارسال نمایش
  *    • جمع پرداخت‌ها با تفکیک (تأییدشده / در انتظار / ردشده)
  *    • مانده = total - sum(verified)
- * ═══════════════════════════════════════════════════════════════════ */
+ * ═══════════════════════════════════════════════════════════════ */
 
 $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
@@ -62,7 +62,8 @@ try {
     }
 } catch (Throwable $e) {
     http_response_code(500);
-    exit('خطا: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+    error_log('[invoice-pdf] ' . $e->getMessage());
+    exit('خطا در ساخت فاکتور. لطفاً بعداً دوباره تلاش کنید.');
 }
 
 if (!$invoice) {
@@ -175,7 +176,7 @@ if ($remaining > 0) {
 $itemsCount = 0;
 foreach ($items as $it) $itemsCount += (int)($it['qty'] ?? 0);
 
-$siteUrl  = 'https://JorabRabeti.ir';
+$siteUrl  = 'https://joorabrabeti.ir';
 $logoPath = PUBLIC_PATH . '/Image/logo3.jpg';
 
 /* ═══ Helperها ═══ */
@@ -199,7 +200,7 @@ $ltr = static fn(string $s): string =>
 '<span dir="ltr" style="unicode-bidi:embed;">' . $s . '</span>';
 
 $moneyFa = static function ($a) use ($faNum, $ltr): string {
-    return $ltr($faNum(number_format((int)$a, 0, '.', '،'))) . ' تومان';
+    return $ltr($faNum(number_format((int)$a, 0, '.', '٬'))) . ' تومان';
 };
 
 $dateFa = static function ($value) use ($faNum, $ltr): string {
@@ -449,9 +450,9 @@ try {
         </div>';
     }
 
-    /* ═══════════════════════════════════════════════════════════════
+    /* ═══════════════════════════════════════════════════════════
        HTML نهایی
-    ═══════════════════════════════════════════════════════════════ */
+    ═══════════════════════════════════════════════════════════ */
     $html = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><style>
         * { font-family: dejavusans; }
         body { direction: rtl; font-size: 8pt; color:#1f2937; line-height:1.5; }
@@ -565,7 +566,7 @@ try {
 
     /* ═══ Footer ═══ */
     $unitLabel = htmlspecialchars(unit_label($items[0]['unit_code'] ?? 'جفتی'));
-    $html .= '<div class="footer">تعداد کل: ' . $ltr($faNum(number_format($itemsCount))) . ' ' . $unitLabel . ' | تولیدی جوراب رابطی | ' . $ltr($h($siteUrl)) . '</div>';
+    $html .= '<div class="footer"| تولیدی جوراب رابطی | ' . $ltr($h($siteUrl)) . '</div>';
 
     $html .= '</body></html>';
 

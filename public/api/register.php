@@ -6,25 +6,33 @@
  *  • تبدیل ارقام فارسی/عربی
  *  • CSRF fallback (اگر auth.php تابع را تعریف نکرد)
  * ═══════════════════════════════════════════════════════════════════ */
+/* ═══ Auto-detect bootstrap (اصلاح‌شده برای هاست) ═══ */
+$__bp = [
+    __DIR__ . '/../../config/bootstrap.php',       // public/config/bootstrap.php (رایج‌ترین)
+    __DIR__ . '/../config/bootstrap.php',          // api/config/bootstrap.php
+    dirname(__DIR__, 2) . '/config/bootstrap.php', // ریشه پروژه/config/bootstrap.php
+    dirname(__DIR__, 3) . '/config/bootstrap.php', // یک پله بالاتر
+    __DIR__ . '/../../sock-b2b/config/bootstrap.php', // حالت لوکال شما
+];
 
-/* ═══ Auto-detect bootstrap ═══ */
-$__bootstrap = dirname(__DIR__, 2) . '/config/bootstrap.php';
-if (!is_file($__bootstrap)) {
-    $__bootstrap = __DIR__ . '/../../config/bootstrap.php';
+$__found = false;
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        $__found = true;
+        break;
+    }
 }
-if (!is_file($__bootstrap)) {
+unset($__bp, $__b);
+
+if (!$__found) {
     header('Content-Type: application/json; charset=utf-8');
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'bootstrap.php پیدا نشد'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-require_once $__bootstrap;
-unset($__bootstrap);
-
-if (!defined('ROOT_PATH')) {
-    header('Content-Type: application/json; charset=utf-8');
-    http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'ROOT_PATH تعریف نشد'], JSON_UNESCAPED_UNICODE);
+    echo json_encode([
+        'ok' => false, 
+        'error' => 'فایل bootstrap.php پیدا نشد. لطفاً مسیر پوشه config را بررسی کنید.',
+        'debug_paths' => $__bp // برای دیباگ (بعداً حذف کنید)
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -133,8 +141,8 @@ try {
     if (!$isValidNationalCode($nationalCode)) {
         json_response(['ok' => false, 'error' => 'کد ملی ۱۰ رقمی معتبر وارد کنید.'], 422);
     }
-    if (strlen($password) < 8) {
-        json_response(['ok' => false, 'error' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.'], 422);
+    if (strlen($password) < 4) {
+        json_response(['ok' => false, 'error' => 'رمز عبور باید حداقل ٤ کاراکتر باشد.'], 422);
     }
     if ($password !== $password2) {
         json_response(['ok' => false, 'error' => 'تکرار رمز عبور صحیح نیست.'], 422);

@@ -1,5 +1,9 @@
 <?php
-/* نقطه شروع همه فایل‌ها — مسیرها + زمان */
+/* نقطه شروع همه فایل‌ها — مسیرها + زمان
+ *
+ * ⭐ PATCH: خط require jalali.php در انتها اضافه شده.
+ *    این فایل را جایگزین config/bootstrap.php اصلی کنید.
+ */
 
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', dirname(__DIR__));
@@ -52,8 +56,11 @@ date_default_timezone_set(APP_TIMEZONE);
 
 /* آدرس اصلی سایت — canonical، sitemap و JSON-LD */
 if (!defined('SITE_URL')) {
-    define('SITE_URL', 'https://jorabrabeti.ir');
+    define('SITE_URL', 'https://joorabrabeti.ir');
 }
 
 /* توابع کمکی مشترک (current_user_group, inventory_state, log_stock_movement, record_audit, ...) */
 require_once ROOT_PATH . '/config/helpers.php';
+
+/* ⭐ PATCH: توابع تاریخ شمسی (to_jalali, jalali_to_gregorian, fa_digits, en_digits) */
+require_once ROOT_PATH . '/app/services/jalali.php';

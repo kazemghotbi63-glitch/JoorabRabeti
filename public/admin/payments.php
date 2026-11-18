@@ -151,14 +151,12 @@ $sendOrderApprovedSms = static function (array $fin): void {
     if (empty($fin['order_id'])) {
         return;
     }
-
     try {
         OrderSmsService::orderApproved((int)$fin['order_id'], $fin);
     } catch (Throwable $e) {
         error_log('ORDER APPROVED SMS FAILED: ' . $e->getMessage());
     }
 };
-
 
 /* ═══ نتیجه مالی — COMPUTED از حقیقت (total / paid_total) ═══ */
 
@@ -1854,7 +1852,7 @@ ob_start();
                             <?php if ($s['receipt_path']): ?>
 
                                 <a
-                                    href="<?= $h($s['receipt_path']) ?>"
+                                    href="<?= $h(private_file_url($s['receipt_path'])) ?>"
                                     target="_blank">
                                     🖼 فیش
                                 </a>

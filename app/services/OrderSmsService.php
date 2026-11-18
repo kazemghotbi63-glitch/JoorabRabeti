@@ -2,16 +2,10 @@
 
 declare(strict_types=1);
 
-/**
- * Order SMS Service
- *
- * مسئول:
- * - آماده‌سازی اطلاعات پیامک‌های مرتبط با سفارش
- * - انتخاب Pattern مناسب از settings
- * - جلوگیری از ارسال تکراری پیامک
- *
- * ارسال واقعی SMS توسط SmsService انجام می‌شود.
- */
+/* ─── بارگذاری وابستگی‌ها ─── */
+if (!class_exists('SmsService', false)) {
+    require_once ROOT_PATH . '/app/services/SmsService.php';
+}
 
 final class OrderSmsService
 {
@@ -38,17 +32,20 @@ final class OrderSmsService
             throw new RuntimeException('Pattern تأیید سفارش تنظیم نشده است.');
         }
 
-        if (self::alreadySent($orderId, 'order_approved', $patternId)) {
+        /* ⭐ event یهتا با timestamp — هر تأیید پیامک خودش رو داره */
+        $uniqueEvent = 'order_approved_' . date('YmdHis');
+
+        if (self::alreadySent($orderId, $uniqueEvent, $patternId)) {
             return ['success' => true, 'skipped' => true, 'reason' => 'already_sent'];
         }
 
         return SmsService::sendPattern(
             $mobile,
             $patternId,
-            self::orderVariables($order, $fin),
+            self::orderApprovedVariables($order, $fin),
             (int)$order['user_id'],
             $orderId,
-            'order_approved'
+            $uniqueEvent
         );
     }
 
@@ -74,13 +71,14 @@ final class OrderSmsService
         if ($patternId <= 0) {
             throw new RuntimeException('Pattern پیامک ارسال سفارش تنظیم نشده است.');
         }
-
         $statusEventMap = [
-            'packed'       => 'order_shipping_packed',
-            'shipped-pik'  => 'order_shipping_pik',
-            'shipped-post' => 'order_shipping_post',
+            'packed'            => 'order_shipping_packed',
+            'shipped-pik'       => 'order_shipping_pik',
+            'shipped-post'      => 'order_shipping_post',
+            'shipped-tipax'     => 'order_shipping_tipax',
+            'shipped-barbari'   => 'order_shipping_barbari',
+            'shipped'           => 'order_shipping_general',
         ];
-
         $currentStatus = (string)($order['status'] ?? '');
         $event = $statusEventMap[$currentStatus] ?? 'order_shipping';
 
@@ -91,7 +89,7 @@ final class OrderSmsService
         return SmsService::sendPattern(
             $mobile,
             $patternId,
-            self::orderVariables($order, []),
+            self::orderShippingVariables($order),
             (int)$order['user_id'],
             $orderId,
             $event
@@ -129,18 +127,20 @@ final class OrderSmsService
      */
     private static function resolveMobile(array $order): string
     {
-        // ⬅️ اولویت به شماره کاربر (صاحب حساب)
+        /* ⭐ اولویت به شماره کاربر (صاحب حساب) */
         $mobile = trim((string)($order['user_mobile'] ?? ''));
         if ($mobile !== '') {
             return $mobile;
         }
-        // اگه شماره کاربر نبود، از شماره گیرنده استفاده کن
+        /* اگه شماره کاربر نبود، از شماره گیرنده استفاده کن */
         return trim((string)($order['shipping_mobile'] ?? ''));
     }
+
     /**
-     * متغیرهای Pattern
+     * ⭐ متغیرهای Pattern تأیید پرداخت (2685)
+     *    ORDER, DATE, PAID, REMAINING, STATUS
      */
-    private static function orderVariables(array $order, array $fin = []): array
+    private static function orderApprovedVariables(array $order, array $fin = []): array
     {
         $paid      = (float)($fin['paid'] ?? 0);
         $remaining = (float)($fin['remaining'] ?? 0);
@@ -159,6 +159,19 @@ final class OrderSmsService
             'PAID'      => self::formatMoney($paid),
             'REMAINING' => self::formatMoney(abs($remaining)),
             'STATUS'    => $statusText,
+        ];
+    }
+
+    /**
+     * ⭐ متغیرهای Pattern ارسال سفارش (2691)
+     *    ORDER, DATE, TIME
+     */
+    private static function orderShippingVariables(array $order): array
+    {
+        return [
+            'ORDER' => (string)$order['order_number'],
+            'DATE'  => self::jalaliDate(),
+            'TIME'  => self::timeFa(),
         ];
     }
 
@@ -190,6 +203,26 @@ final class OrderSmsService
         $formatted = $jy . '/' . str_pad((string)$jm, 2, '0', STR_PAD_LEFT) . '/' . str_pad((string)$jd, 2, '0', STR_PAD_LEFT);
 
         return strtr($formatted, [
+            '0' => '۰',
+            '1' => '۱',
+            '2' => '۲',
+            '3' => '۳',
+            '4' => '۴',
+            '5' => '۵',
+            '6' => '۶',
+            '7' => '۷',
+            '8' => '۸',
+            '9' => '۹',
+        ]);
+    }
+
+    /**
+     * ⭐ ساعت فعلی به فارسی
+     */
+    private static function timeFa(): string
+    {
+        $time = date('H:i');
+        return strtr($time, [
             '0' => '۰',
             '1' => '۱',
             '2' => '۲',

@@ -22,14 +22,14 @@ require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/PricingService.php';
 
-if (!is_logged_in()) {
-    header('Location: /');
+if (!is_customer_logged_in()) {
+    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
     exit;
 }
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
-$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+$userId = (int)($_SESSION['customer_id'] ?? 0);
 $db = db();
 $userGroup = current_user_group();
 
@@ -156,10 +156,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         WHERE ci.id = ?
           AND c.user_id = ?
           AND c.status = 'active'
-          AND p.is_active = 1
+          AND (p.is_active = 1 OR ? = 'remove')
         LIMIT 1
     ");
-    $stmt->execute([$itemId, $userId]);
+    $stmt->execute([$itemId, $userId, $do]);
     $cartItem = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$cartItem) {
@@ -316,8 +316,7 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $totalBase     = 0;
 $totalFinal    = 0;
 $totalDiscount = 0;
-$unitCounts    = [];
-
+$unitCounts = [];
 foreach ($items as &$it) {
     $qty = (int)$it['qty'];
 
@@ -329,8 +328,7 @@ foreach ($items as &$it) {
     $it['discount_percent'] = $pricing['discount_percent'];
     $it['discount_source']  = $pricing['discount_source'];
     $it['customer_message'] = $pricing['customer_message'];
-    $it['unit_label']       = unit_label($it['unit_code'] ?? 'جفتی');
-
+    $it['unit_label'] = unit_label($it['unit_code'] ?? 'جفتی');
     $it['next_tier'] = null;
     if ($pricing['discount_source'] !== 'group') {
         $tiers = PricingService::getTiers($db, (int)$it['product_id']);
@@ -399,6 +397,26 @@ foreach ($items as &$it) {
     }
 }
 unset($it);
+
+/* ⭐ FIX: محاسبه مجموع جفتی از منبع مشترک */
+$pairQty = PricingService::getPairQtyByUser($db, $userId);
+/* حداقل خرید تجمیعی محصولات جفتی */
+/* ⭐ FIX: حداقل خرید تجمیعی محصولات جفتی — از منبع مشترک */
+$cartMinimumIssue = null;
+
+/* ⭐ FIX: حداقل خرید تجمیعی محصولات جفتی — پیام شفاف و مشتری‌پسند */
+$cartMinimumIssue = null;
+if (PricingService::violatesPairMinimum($pairQty)) {
+    $minPairs = PricingService::CART_MIN_PAIR_QTY;
+    $needed   = $minPairs - $pairQty;
+
+    $cartMinimumIssue =
+        'حداقل خرید محصولات جفتی ' . $numFa($minPairs) . ' جفت است. '
+        . 'در سبد شما فعلاً ' . $numFa($pairQty) . ' جفت وجود دارد. '
+        . 'فقط ' . $numFa($needed) . ' جفت دیگر اضافه کنید تا بتوانید سفارش را ثبت کنید.';
+
+    $hasIssue = true;
+}
 
 $pageTitle = 'سبد سفارش | رابطی';
 $pageDescription = 'سبد خرید عمده جوراب — رابطی';
@@ -577,8 +595,31 @@ endif; ?>
             </div>
 
             <?php if ($hasIssue): ?>
-                <div class="form-alert error" style="display:block;">⚠️ برخی اقلام سبد نیاز به اصلاح دارند.</div>
+
+                <?php if ($cartMinimumIssue): ?>
+                    <div class="form-alert error" style="display:block;line-height:2;">
+                        ⚠️ <?= $h($cartMinimumIssue) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php
+                $hasItemIssue = false;
+                foreach ($items as $checkItem) {
+                    if (!empty($checkItem['issue'])) {
+                        $hasItemIssue = true;
+                        break;
+                    }
+                }
+                ?>
+
+                <?php if ($hasItemIssue): ?>
+                    <div class="form-alert error" style="display:block;">
+                        ⚠️ برخی اقلام سبد نیاز به اصلاح دارند.
+                    </div>
+                <?php endif; ?>
+
             <?php else: ?>
+
                 <a href="/preview-invoice?preview=1" target="_blank" class="btn btn-outline cart-preview-btn">👁 مشاهده پیش‌فاکتور</a>
                 <a href="/checkout-address" class="btn btn-primary cart-checkout-btn">ادامه و ثبت سفارش ←</a>
             <?php endif; ?>
@@ -670,15 +711,21 @@ endif; ?>
                         };
                     });
                 })
+
                 .then(function(data) {
                     if (!data.ok) {
                         alert(data.error || 'تغییر تعداد انجام نشد.');
+                        // ⭐ FIX: بازگرداندن UI به وضعیت واقعی DB (مثلاً MOQ/موجودی)
+                        window.location.reload();
                         return;
                     }
-                    updateCartItem(itemId, data);
                     if (window.updateCartBadges && data.count !== undefined) {
                         window.updateCartBadges(data.count);
                     }
+
+                    // محاسبه مجدد حداقل خرید و وضعیت اعتبارسنجی سبد
+                    window.location.reload();
+                    return;
                 })
                 .catch(function(err) {
                     console.error('CART_UPDATE_ERROR:', err);
@@ -690,70 +737,7 @@ endif; ?>
                 });
         }
 
-        function updateCartItem(itemId, data) {
-            var item = document.querySelector('[data-cart-item="' + itemId + '"]');
-            if (!item) return;
 
-            var unitEl = item.querySelector('.cart-item-price b');
-            if (unitEl && data.unit_price !== undefined) {
-                unitEl.textContent = formatPrice(data.unit_price) + ' تومان';
-            }
-
-            var discEl = item.querySelector('.cart-item-price small');
-            if (discEl) {
-                var dp = Number(data.discount_percent) || 0;
-                if (dp > 0) {
-                    var label = data.discount_source === 'group' ? 'تخفیف سطح' : 'تخفیف پلکانی';
-                    discEl.textContent = enToFa(dp.toFixed(2)) + '٪ ' + label + ' اعمال شد';
-                } else {
-                    discEl.textContent = 'قیمت همکاری';
-                }
-            }
-
-            var totalEl = item.querySelector('.cart-line-total b');
-            if (totalEl && data.line_total !== undefined) {
-                totalEl.textContent = formatPrice(data.line_total) + ' تومان';
-            }
-
-            recalcCartSummary();
-        }
-
-        function recalcCartSummary() {
-            var items = document.querySelectorAll('[data-cart-item]');
-            var totalFinal = 0;
-            var unitCounts = {};
-
-            items.forEach(function(item) {
-                var input = item.querySelector('.step-input');
-                var qty = parseInt(faToEn(input ? input.value : '0'), 10) || 0;
-
-                var lineTotalText = (item.querySelector('.cart-line-total b') || {}).textContent || '0';
-                var lineTotal = parseInt(faToEn(lineTotalText), 10) || 0;
-
-                var stepper = item.querySelector('.stepper');
-                var unit = stepper ? (stepper.dataset.unit || 'جفت') : 'جفت';
-
-                totalFinal += lineTotal;
-
-                if (!unitCounts[unit]) unitCounts[unit] = 0;
-                unitCounts[unit] += qty;
-            });
-
-            var qtyParts = [];
-            Object.keys(unitCounts).forEach(function(unit) {
-                qtyParts.push(enToFa(unitCounts[unit]) + ' ' + unit);
-            });
-            var qtyText = qtyParts.join(' + ') || '۰';
-
-            document.querySelectorAll('.cart-summary-row').forEach(function(row) {
-                var spanEl = row.querySelector('span');
-                var b = row.querySelector('b');
-                if (!b || !spanEl) return;
-                var label = spanEl.textContent.trim();
-                if (label.indexOf('تعداد کل') !== -1) b.textContent = qtyText;
-                if (label.indexOf('مبلغ نهایی') !== -1) b.textContent = formatPrice(totalFinal) + ' تومان';
-            });
-        }
 
         document.addEventListener('click', function(event) {
             var t = event.target;

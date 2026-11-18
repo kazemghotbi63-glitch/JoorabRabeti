@@ -1,42 +1,52 @@
 <?php
-/* ════ RABETI-LAYOUT-FIX | نسخه: v4 | 2026-11-01 | جدیدترین نسخه (LATEST) ════ */
-/* تغییر این نسخه: لود PricingService برای نمایش سطح مشتری در هدر */
+/* ════ RABETI-LAYOUT | v5 ════ */
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once ROOT_PATH . '/config/settings.php';
-require_once ROOT_PATH . '/app/services/PricingService.php'; // ⭐ اضافه شد
+require_once ROOT_PATH . '/app/services/PricingService.php';
 
 $isAdmin    = is_admin_logged_in();
 $isCustomer = is_customer_logged_in();
 $isLoggedIn = $isAdmin || $isCustomer;
 
-/* ⭐ تصاویر برند از settings */
-$siteLogo         = Setting::get('site_logo', '/Image/logo3.jpg');
-$siteFavicon      = Setting::get('site_favicon', '/Image/logo3.jpg');
-$ogDefaultImage   = Setting::get('og_default_image', '/Image/logo3.jpg');
-$siteUrl          = 'https://joorabrabeti.ir';
+$siteLogo       = Setting::get('site_logo', '/Image/logo3.jpg');
+$siteFavicon    = Setting::get('site_favicon', '/Image/logo3.jpg');
+$ogDefaultImage = Setting::get('og_default_image', '/Image/logo3.jpg');
+$siteUrl        = 'https://joorabrabeti.ir';
 
 $userName = $isAdmin
     ? ($_SESSION['admin_name'] ?? 'مدیر')
     : ($_SESSION['customer_name'] ?? 'کاربر');
-?>
-<?php
+
+/* ─── گروه مشتری — فقط یک بار محاسبه می‌شود ─── */
+$groupName  = null;
+$groupClass = null;
+
+if ($isCustomer && class_exists('PricingService')) {
+    $groupData = PricingService::getGroup(db(), current_user_group());
+    if ($groupData) {
+        $groupName  = $groupData['name'];
+        $groupClass = 'is-' . strtolower((string)current_user_group()); // is-gold / is-silver / is-bronze  
+    }
+}
+
+/* ─── تعداد سبد خرید ─── */
 $cartCount = 0;
 if ($isLoggedIn) {
     try {
-        $uid = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
-        $stmt = db()->prepare("
-            SELECT COALESCE(SUM(ci.qty), 0)
-            FROM cart_items ci
-            JOIN carts c ON c.id = ci.cart_id
-            WHERE c.user_id = ? AND c.status = 'active'
+        $uid  = (int)($_SESSION['customer_id'] ?? 0);
+        $stmt = db()->prepare("  
+            SELECT COALESCE(SUM(ci.qty), 0)  
+            FROM cart_items ci  
+            JOIN carts c ON c.id = ci.cart_id  
+            WHERE c.user_id = ? AND c.status = 'active'  
         ");
         $stmt->execute([$uid]);
         $cartCount = (int)$stmt->fetchColumn();
     } catch (Throwable $e) {
+        error_log('cart count: ' . $e->getMessage());
     }
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -47,11 +57,9 @@ if ($isLoggedIn) {
     <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
 
     <!-- ═══ SEO ═══ -->
-    <title>
-        <?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>
-    </title>
+    <title>جوراب رابطی | تولیدکننده و فروش عمده جوراب</title>
 
-    <meta name="description" content="<?= htmlspecialchars($pageDescription ?? 'فروشگاه تخصصی خرید عمده جوراب رابطی — تولید مستقیم، قیمت همکاری، موجودی واقعی و سفارش سریع', ENT_QUOTES, 'UTF-8') ?>">
+    <meta name="description" content="جوراب رابطی، تولیدکننده و عرضه‌کننده انواع جوراب مردانه، زنانه و بچگانه. خرید عمده جوراب با قیمت تولیدی، تخفیف همکاری و سفارش مستقیم از کارخانه." />
     <meta name="author" content="RABETI">
     <meta name="theme-color" content="#004f53">
     <link rel="canonical" href="https://joorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
@@ -59,8 +67,8 @@ if ($isLoggedIn) {
     <!-- ═══ Open Graph ═══ -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="رابطی">
-    <meta property="og:title" content="<?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>">
-    <meta property="og:description" content="<?= htmlspecialchars($pageDescription ?? 'فروشگاه تخصصی خرید عمده جوراب رابطی', ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:title" content="جوراب رابطی | تولیدکننده و فروش عمده جوراب" />
+    <meta property="og:description" content="تولید و عرضه انواع جوراب مردانه، زنانه و بچگانه با قیمت همکاری و سفارش مستقیم از کارخانه." />
     <meta property="og:locale" content="fa_IR">
     <meta property="og:url" content="https://joorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
 
@@ -80,17 +88,26 @@ if ($isLoggedIn) {
     <link rel="mask-icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>" color="#004f53">
 
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=1009">
+    <link rel="stylesheet" href="/assets/css/app.css?v=10014">
+
+    <?php
+    // لود CSS اختصاصی صفحه تماس و درباره ما (فقط در همین دو صفحه)
+    $__currentPage = basename($_SERVER['PHP_SELF'] ?? '');
+    if (in_array($__currentPage, ['contact.php', 'about.php'], true)): ?>
+        <link rel="stylesheet" href="/assets/css/contact-about.css?v=2">
+    <?php endif; ?>
+
     <?php foreach (($pageCss ?? []) as $pc): ?>
         <link rel="stylesheet" href="<?= htmlspecialchars($pc, ENT_QUOTES, 'UTF-8') ?>">
     <?php endforeach; ?>
+
 </head>
 
 <body class="app-body">
 
     <!-- ══════════ نوار اعلان ══════════ -->
 
-    <div class="r6-announce">
+     <div class="r6-announce">
         ارسال رایگان برای سفارش‌های بالای ۱۰ میلیون تومان
     </div>
 
@@ -145,12 +162,11 @@ if ($isLoggedIn) {
                 <div class="header-account">
                     <?php if ($isAdmin): ?>
                         <a href="/admin" class="header-account-btn">پنل مدیریت</a>
-                        <a href="/admin/logout" class="header-account-logout">خروج</a>
+                        <a href="/admin/logout?t=<?= urlencode(logout_token()) ?>" class="header-account-logout">خروج</a>
                     <?php elseif ($isCustomer): ?>
                         <?php
                         // ⭐ دریافت اطلاعات گروه مشتری برای نمایش در هدر
                         $headerUserGroupCode = strtolower((string)current_user_group());
-                        $headerGroupName = 'مشتری';
                         $headerGroupColor = '#8b7355';
 
                         if (class_exists('PricingService')) {
@@ -168,7 +184,7 @@ if ($isLoggedIn) {
 
 
                         </div>
-                        <a href="/api/logout" class="header-account-logout">خروج</a>
+                        <a href="/api/logout?t=<?= urlencode(logout_token()) ?>" class="header-account-logout">خروج</a>
                     <?php else: ?>
                         <button type="button" class="r-btn r-btn-outline auth-trigger" data-auth-open="login">
                             ورود / ثبت‌نام
@@ -183,247 +199,215 @@ if ($isLoggedIn) {
     </header>
 
 
-    <!-- ══════════ طراحی جدید کشوی موبایل رابطی ══════════ -->
-
+    <!-- ══════════ کشوی موبایل رابطی — Cream & Gold ══════════ -->
 
     <div class="overlay" id="overlay"></div>
 
-    <aside class="drawer r6-drawer" id="drawer">
+    <aside class="drawer r6-drawer" id="drawer"
+        aria-label="منوی اصلی"
+        aria-hidden="true">
 
-        <?php if ($isLoggedIn): ?>
+        <!-- هدر منو: مشترک بین مدیر، مشتری و مهمان -->
+        <div class="drawer-user-box">
 
-            <?php
-            // اطلاعات سطح مشتری
-            $drawerGroupName = 'مشتری';
-            $drawerGroupColor = '#d5a34e';
+            <?php if ($isLoggedIn): ?>
 
-            if ($isCustomer) {
-
-                $drawerGroupCode = strtolower(
-                    (string) current_user_group()
-                );
-
-                if (class_exists('PricingService')) {
-                    $drawerGroupData = PricingService::getGroup(
-                        db(),
-                        current_user_group()
-                    );
-
-                    if ($drawerGroupData) {
-                        $drawerGroupName = $drawerGroupData['name'];
-                    }
-                }
-
-                if ($drawerGroupCode === 'gold') {
-                    $drawerGroupColor = '#d4a017';
-                } elseif ($drawerGroupCode === 'silver') {
-                    $drawerGroupColor = '#9ca3af';
-                } elseif ($drawerGroupCode === 'bronze') {
-                    $drawerGroupColor = '#b87333';
-                }
-            }
-            ?>
-
-            <!-- کارت پروفایل -->
-            <div class="drawer-user-box <?= $isAdmin ? 'r6-admin-box' : '' ?>">
-
-                <!-- آواتار سمت راست -->
-                <div class="r6-avatar">
-                    <svg viewBox="0 0 100 100" aria-hidden="true">
-                        <defs>
-                            <linearGradient id="r6AvatarGradient"
-                                x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stop-color="#9a6638" />
-                                <stop offset="100%" stop-color="#68401f" />
-                            </linearGradient>
-                        </defs>
-
-                        <circle cx="50" cy="34" r="18"
-                            fill="url(#r6AvatarGradient)" />
-
-                        <path
-                            d="M12 88 C17 64 34 54 50 54
-                   C66 54 83 64 88 88
-                   C68 101 32 101 12 88Z"
-                            fill="url(#r6AvatarGradient)" />
-                    </svg>
-                </div>
-
-                <!-- اطلاعات کاربر -->
+                <!-- هدر مدیر یا مشتری -->
                 <div class="r6-user-info">
 
-                    <span class="r6-user-label">
-                        <?= $isAdmin ? 'حساب مدیریت' : 'حساب شما' ?>
-                    </span>
-                    <!-- دکمه بستن در سمت چپ -->
-
                     <strong class="r6-user-name">
-                        <?= htmlspecialchars(
-                            $userName,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        ) ?>
+
+                        <span><?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') ?></span>
+
+                        <?php if ($isAdmin): ?>
+                            <span class="r6-role-badge r6-admin-badge">
+                                مدیر
+                            </span>
+                        <?php else: ?>
+                            <?php if ($isCustomer && !empty($groupName)): ?>
+                                <?php
+                                $safeGroupClass = preg_replace(
+                                    '/[^a-zA-Z0-9_-]/',
+                                    '',
+                                    (string)($groupClass ?? '')
+                                );
+                                ?>
+                                <span class="r6-group-badge  <?= htmlspecialchars($safeGroupClass, ENT_QUOTES, 'UTF-8') ?>"> مشتری سطح
+                                    <?= htmlspecialchars($groupName, ENT_QUOTES, 'UTF-8') ?>
+                                </span>
+                            <?php endif; ?>
+                        <?php endif; ?>
+
                     </strong>
-
-                    <?php if ($isCustomer): ?>
-                        <span
-                            class="r6-user-badge"
-                            style="background: <?= htmlspecialchars($drawerGroupColor, ENT_QUOTES, 'UTF-8') ?>;">
-
-                            <svg width="16" height="16"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                                aria-hidden="true">
-                                <path d="M5 19h14v2H5zM3 7l5 5 4-8 4 8 5-5-2 11H5L3 7z" />
-                            </svg>
-
-                            مشتری سطح <?= htmlspecialchars(
-                                            $drawerGroupName,
-                                            ENT_QUOTES,
-                                            'UTF-8'
-                                        ) ?>
-                        </span>
-                    <?php endif; ?>
 
                 </div>
 
-            </div>
+            <?php else: ?>
 
-        <?php else: ?>
-            <!-- دکمه بستن در سمت چپ -->
-            <button
-                type="button"
+                <!-- هدر اختصاصی مهمان -->
+                <a href="/" class="r6-drawer-brand" aria-label="صفحه اصلی رابطی">
+
+                    <span class="r6-brand-name">رابطی</span>
+                    <span class="r6-brand-en">RABETI</span>
+
+                </a>
+
+            <?php endif; ?>
+
+            <!-- دکمه بستن: کوچک و سمت چپ — برای همه کاربران (مهمان و لاگین) -->
+            <button type="button"
                 class="drawer-close"
                 id="closeBtn"
-                aria-label="بستن">
-                ×
-            </button>
-        <?php endif; ?>
+                aria-label="بستن منو">
 
-        <!-- لینک‌های منو -->
-        <nav class="drawer-nav">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+
+            </button>
+
+        </div>
+
+
+        <!-- ناوبری منو -->
+        <nav class="drawer-nav" aria-label="دسترسی‌های اصلی">
 
             <?php if ($isAdmin): ?>
 
                 <a href="/admin" class="r6-drawer-link">
-
                     <span class="r6-link-icon">
-                        <svg viewBox="0 0 24 24">
-                            <rect x="3" y="4" width="18" height="16" rx="2" />
-                            <path d="M8 9h8M8 13h5" />
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" />
                         </svg>
                     </span>
-
                     <span class="r6-link-text">پنل مدیریت</span>
+                </a>
 
-                    <span class="r6-chevron"></span>
+            <?php elseif ($isCustomer): ?>
 
+                <a href="/account-orders" class="r6-drawer-link">
+                    <span class="r6-link-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 7V6a6 6 0 0112 0v1h2.2l1.4 12.6A2 2 0 0119.6 22H4.4a2 2 0 01-2-2.4L3.8 7H6z" />
+                        </svg>
+                    </span>
+                    <span class="r6-link-text">سفارش‌های من</span>
                 </a>
 
             <?php endif; ?>
 
-            <a href="/account-orders" class="r6-drawer-link">
 
-                <span class="r6-link-icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M5 8h14l2 13H3L5 8z" />
-                        <path d="M9 9V6a3 3 0 0 1 6 0v3" />
-                    </svg>
-                </span>
-
-                <span class="r6-link-text">سفارش‌های من</span>
-
-                <span class="r6-chevron"></span>
-
-            </a>
-
-            <a href="/custom-order-track" class="r6-drawer-link">
-
-                <span class="r6-link-icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M3 7l9-4 9 4-9 4-9-4z" />
-                        <path d="M3 7v11l9 4 9-4V7" />
-                        <path d="M12 11v11" />
-                        <circle cx="18" cy="15" r="3" />
-                        <path d="m20.2 17.2 2 2" />
-                    </svg>
-                </span>
-
-                <span class="r6-link-text">پیگیری سفارش اختصاصی</span>
-
-                <span class="r6-chevron"></span>
-
-            </a>
-
+            <!-- محصولات -->
             <a href="/products" class="r6-drawer-link">
-
                 <span class="r6-link-icon">
-                    <svg viewBox="0 0 24 24">
-                        <rect x="3" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="3" width="7" height="7" rx="1" />
-                        <rect x="3" y="14" width="7" height="7" rx="1" />
-                        <rect x="14" y="14" width="7" height="7" rx="1" />
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" />
+                        <path d="M12 22V12M3 7l9 5 9-5" />
                     </svg>
                 </span>
-
                 <span class="r6-link-text">محصولات</span>
-
-                <span class="r6-chevron"></span>
-
             </a>
 
-            <a href="/about" class="r6-drawer-link">
 
+            <!-- پرفروش‌ها -->
+            <a href="/products?sort=best" class="r6-drawer-link">
                 <span class="r6-link-icon">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M12 11v6" />
-                        <path d="M12 7h.01" />
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m12 3 2.7 5.6 6.1.8-4.5 4.3 1.1 6.1-5.4-2.9-5.4 2.9 1.1-6.1-4.5-4.3 6.1-.8L12 3z" />
                     </svg>
                 </span>
-
-                <span class="r6-link-text">درباره رابطی</span>
-
-                <span class="r6-chevron"></span>
-
+                <span class="r6-link-text">پرفروش‌ها</span>
             </a>
 
-            <?php if ($isLoggedIn): ?>
 
-                <a
-                    href="<?= $isAdmin
-                                ? '/admin/logout'
-                                : '/api/logout' ?>"
-                    class="r6-logout-link">
-
-                    <span>خروج از حساب</span>
-
-                    <svg viewBox="0 0 24 24">
-                        <path d="M10 17l5-5-5-5" />
-                        <path d="M15 12H3" />
-                        <path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" />
+            <!-- جدیدها -->
+            <a href="/#new" class="r6-drawer-link">
+                <span class="r6-link-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3v18M3 12h18" />
                     </svg>
+                </span>
+                <span class="r6-link-text">جدیدها</span>
+            </a>
 
-                </a>
 
-            <?php endif; ?>
+            <!-- سفارش اختصاصی -->
+            <a href="/custom-order" class="r6-drawer-link">
+                <span class="r6-link-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                </span>
+                <span class="r6-link-text">سفارش اختصاصی</span>
+            </a>
+
+
+            <!-- تماس با ما -->
+            <a href="/contact" class="r6-drawer-link">
+                <span class="r6-link-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" />
+                    </svg>
+                </span>
+                <span class="r6-link-text">تماس با ما</span>
+            </a>
+
+
+            <!-- درباره رابطی -->
+            <a href="/about" class="r6-drawer-link">
+                <span class="r6-link-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 8h.01M11 12h1v5h1" />
+                    </svg>
+                </span>
+                <span class="r6-link-text">درباره رابطی</span>
+            </a>
 
         </nav>
 
-        <!-- موج قهوه‌ای پایین -->
-        <div class="r6-bottom-wave">
-            <svg viewBox="0 0 340 55"
-                preserveAspectRatio="none"
-                aria-hidden="true">
-                <path
-                    d="M0 22 C65 45 115 17 180 25
-                   C245 35 285 12 340 0
-                   L340 55 L0 55 Z"
-                    fill="#58351f" />
-            </svg>
+
+        <!-- فوتر ثابت منو -->
+        <div class="drawer-foot">
+
+            <?php if ($isLoggedIn): ?>
+
+                <a href="<?= $isAdmin
+                                ? '/admin/logout?t=' . urlencode(logout_token())
+                                : '/api/logout?t=' . urlencode(logout_token()) ?>"
+                    class="r6-logout-link">
+
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                    </svg>
+
+                    خروج از حساب
+
+                </a>
+
+            <?php else: ?>
+
+                <button type="button"
+                    class="r6-logout-link r6-login-link auth-trigger"
+                    data-auth-open="login">
+
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
+                    </svg>
+
+                    ورود / ثبت‌نام
+
+                </button>
+
+            <?php endif; ?>
+
         </div>
 
     </aside>
+
 
 
     <!-- ══════════ محتوا ══════════ -->
@@ -436,136 +420,127 @@ if ($isLoggedIn) {
     <div class="footer-line"></div>
 
     <!-- ══════════ فوتر ══════════ -->
+    <?php if (empty($hideFooter)): ?>
+        <footer class="r6-footer">
+            <div class="container">
 
-    <footer class="r6-footer">
-        <div class="container">
+                <div class="r6-footer-box">
 
-            <div class="r6-footer-box">
+                    <div class="r6-footer-top">
 
-                <div class="r6-footer-top">
-
-                    <!-- برند -->
-                    <div class="r6-footer-brand">
-                        <div class="r6-footer-logo">
-                            <span class="r6-logo">رابطی</span>
-                            <span class="r6-logo-en">RABETI</span>
+                        <!-- برند -->
+                        <div class="r6-footer-brand">
+                            <div class="r6-footer-logo">
+                                <span class="r6-logo">رابطی</span>
+                                <span class="r6-logo-en">RABETI</span>
+                            </div>
+                            <p>
+                                تولید و پخش عمده جوراب با قیمت همکاری،
+                                موجودی واقعی و ارسال سریع به سراسر ایران.
+                            </p>
+                            <div class="r6-footer-trust">
+                                <span>✓ تولید مستقیم</span>
+                                <span>✓ قیمت همکاری</span>
+                                <span>✓ ارسال سریع</span>
+                            </div>
                         </div>
-                        <p>
-                            تولید و پخش عمده جوراب با قیمت همکاری،
-                            موجودی واقعی و ارسال سریع به سراسر ایران.
-                        </p>
-                        <div class="r6-footer-trust">
-                            <span>✓ تولید مستقیم</span>
-                            <span>✓ قیمت همکاری</span>
-                            <span>✓ ارسال سریع</span>
+
+                        <!-- ستون‌های لینک -->
+                        <div class="r6-footer-cols">
+
+                            <div class="r6-footer-col">
+                                <b>خرید</b>
+                                <a href="/products">محصولات</a>
+                                <a href="/custom-order">سفارش اختصاصی</a>
+                            </div>
+
+                            <div class="r6-footer-col">
+                                <b>راهنما</b>
+                                <a href="/contact">شرایط سفارش</a>
+                                <a href="/contact">ارسال و پرداخت</a>
+                            </div>
+
+                            <div class="r6-footer-col">
+                                <b>رابطی</b>
+                                <a href="/about">درباره ما</a>
+                                <a href="/contact">ارتباط با ما</a>
+
+                            </div>
+
                         </div>
+
+                    </div>
+                    <!-- ═══ نسخه فشرده و لاکچری فوتر ═══ -->
+                    <div class="r6-footer-contact" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 20px;">
+
+                        <!-- کارخانه -->
+                        <div style="background: #fff; border-radius: 14px; padding: 16px 18px; border: 1px solid #eee; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); color: #2e7d32; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2 20h20M4 20V8l6 4V8l6 4V4h4v16" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20v-4h2v4M15 20v-4h2v4" />
+                                    </svg>
+                                </span>
+                                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a;">کارخانه</h4>
+                            </div>
+                            <p style="margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: #555;">
+                                بازار حاج قاسم، کوچه علیرضا زمان، پلاک ۱۸
+                            </p>
+                            <a href="tel:02155890915" style="font-size: 13.5px; color: #2e7d32; text-decoration: none; font-weight: 600; direction: ltr; display: inline-block;">
+                                ۰۲۱-۵۵۸۹۰۹۱۵
+                            </a>
+                        </div>
+
+                        <!-- دفتر فروش -->
+                        <div style="background: #fff; border-radius: 14px; padding: 16px 18px; border: 1px solid #eee; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #e3f2fd, #bbdefb); color: #1565c0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" />
+                                    </svg>
+                                </span>
+                                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a;">دفتر فروش</h4>
+                            </div>
+                            <p style="margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: #555;">
+                                بازار حاج قاسم، کوچه چراغ برق، کوچه حلم‌زاده، پلاک ۱۶، واحد ۱
+                            </p>
+                            <a href="tel:09120380974" style="font-size: 13.5px; color: #1565c0; text-decoration: none; font-weight: 600; direction: ltr; display: inline-block;">
+                                ۰۹۱۲-۰۳۸-۰۹۷۴
+                            </a>
+                        </div>
+
+                        <!-- فروشگاه -->
+                        <div style="background: #fff; border-radius: 14px; padding: 16px 18px; border: 1px solid #eee; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #fff3e0, #ffe0b2); color: #e65100; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 22V12h6v10" />
+                                    </svg>
+                                </span>
+                                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a;">فروشگاه</h4>
+                            </div>
+                            <p style="margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: #555;">
+                                بازار بزرگ تهران — بازار عباس‌آباد، سرای لطفی‌پور، پلاک ۲۲
+                            </p>
+                            <a href="tel:09197693149" style="font-size: 13.5px; color: #e65100; text-decoration: none; font-weight: 600; direction: ltr; display: inline-block;">
+                                ۰۹۱۹-۷۶۹-۳۱۴۹
+                            </a>
+                        </div>
+
                     </div>
 
-                    <!-- ستون‌های لینک -->
-                    <div class="r6-footer-cols">
-
-                        <div class="r6-footer-col">
-                            <b>خرید</b>
-                            <a href="/products">محصولات</a>
-                            <a href="/custom-order">سفارش اختصاصی</a>
-                        </div>
-
-                        <div class="r6-footer-col">
-                            <b>راهنما</b>
-                            <a href="/contact">شرایط سفارش</a>
-                            <a href="/contact">ارسال و پرداخت</a>
-                        </div>
-
-                        <div class="r6-footer-col">
-                            <b>رابطی</b>
-                            <a href="/about">درباره ما</a>
-                            <!-- <a href="/contact">تماس با ما</a> -->
-                        </div>
-
+                    <!-- کپی‌رایت -->
+                    <div class="r6-footer-bottom">
+                        <span>&copy;طراحی و سئو <b><i> Thurnder_Web ⚡ </i></b></span>
                     </div>
 
-                </div>
-
-                <!-- ═══ اطلاعات تماس — کارخانه، دفتر، فروشگاه ═══ -->
-                <div class="r6-footer-contact" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 24px;">
-
-                    <!-- 🏭 کارخانه -->
-                    <div class="r6-contact-card">
-                        <div class="r6-contact-header">
-                            <span class="r6-contact-icon" style="background: #e8f5e9; color: #2e7d32;">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2 20h20M4 20V8l6 4V8l6 4V4h4v16" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 20v-4h2v4M15 20v-4h2v4" />
-                                </svg>
-                            </span>
-                            <h4>کارخانه</h4>
-                        </div>
-                        <div class="r6-contact-body">
-                            <p><strong>آدرس:</strong> بازار حاج قاسم، کوچه علیرضا زمان، پلاک ۱۸</p>
-                            <p><strong>تلفن ثابت:</strong> <span dir="ltr">۰۲۱-۵۵۸۹۰۹۱۵</span></p>
-                            <br>
-                            <a href="https://www.google.com/maps/place/%D8%A7%D8%B3%D8%AA%D8%A7%D9%86+%D8%AA%D9%87%D8%B1%D8%A7%D9%86%D8%8C+%D8%AA%D9%87%D8%B1%D8%A7%D9%86%D8%8C+%D9%85%D9%86%D8%B7%D9%82%D9%87+%DB%B1%DB%B2%D8%8C+%D8%A8%D8%A7%D8%B2%D8%A7%D8%B1+%D8%AD%D8%A7%D8%AC+%D9%82%D8%A7%D8%B3%D9%85%D8%8C+%D8%A7%DB%8C%D8%B1%D8%A7%D9%86%E2%80%AD/@35.6693571,51.4209725,21z/data=!4m6!3m5!1s0x3f8e01e496fecf09:0x8c6a3376da2b18d6!8m2!3d35.6686879!4d51.4189461!16s%2Fg%2F11jp6w0d_y?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D" target="_blank">رفتن به آدرس</a>
-                        </div>
-                        <br>
-                        <br>
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d202.58190305413368!2d51.4209725133567!3d35.6693571052259!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3f8e01e496fecf09%3A0x8c6a3376da2b18d6!2z2KfYs9iq2KfZhiDYqtmH2LHYp9mG2Iwg2KrZh9ix2KfZhtiMINmF2YbYt9mC2Ycg27HbstiMINio2KfYstin2LEg2K3Yp9isINmC2KfYs9mF2Iwg2KfbjNix2KfZhg!5e0!3m2!1sfa!2s!4v1793642059841!5m2!1sfa!2s" style="border:0;  border-radius: 10px !important;" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-                    </div>
-
-                    <!-- 🏢 دفتر فروش -->
-                    <div class="r6-contact-card">
-                        <div class="r6-contact-header">
-                            <span class="r6-contact-icon" style="background: #e3f2fd; color: #1565c0;">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" />
-                                </svg>
-                            </span>
-                            <h4>دفتر فروش</h4>
-                        </div>
-                        <div class="r6-contact-body">
-                            <p><strong>آدرس:</strong> بازار حاج قاسم، کوچه چراغ برق، کوچه حلم زاده، پلاک ۱۶، واحد ۱</p>
-                            <p><strong>موبایل / واتساپ:</strong> <span dir="ltr">۰۹۱۲۰۳۸۰۹۷۴</span></p>
-                            <br>
-
-                            <a target="_blank" href="https://www.google.com/maps/place/%D8%A7%D8%B3%D8%AA%D8%A7%D9%86+%D8%AA%D9%87%D8%B1%D8%A7%D9%86%D8%8C+%D8%AA%D9%87%D8%B1%D8%A7%D9%86%D8%8C+%D9%85%D9%86%D8%B7%D9%82%D9%87+%DB%B1%DB%B2%D8%8C+%D8%A8%D8%A7%D8%B2%D8%A7%D8%B1+%D8%AD%D8%A7%D8%AC+%D9%82%D8%A7%D8%B3%D9%85%D8%8C+%D8%A7%DB%8C%D8%B1%D8%A7%D9%86%E2%80%AD/@35.6689646,51.4183909,20z/data=!4m6!3m5!1s0x3f8e01e496fecf09:0x8c6a3376da2b18d6!8m2!3d35.6686879!4d51.4189461!16s%2Fg%2F11jp6w0d_y?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D">رفتن به آدرس</a>
-                        </div>
-                        <br>
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d405.16579825678156!2d51.41839088714251!3d35.66896460928466!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3f8e01e496fecf09%3A0x8c6a3376da2b18d6!2z2KfYs9iq2KfZhiDYqtmH2LHYp9mG2Iwg2KrZh9ix2KfZhtiMINmF2YbYt9mC2Ycg27HbstiMINio2KfYstin2LEg2K3Yp9isINmC2KfYs9mF2Iwg2KfbjNix2KfZhg!5e0!3m2!1sfa!2s!4v1793640627225!5m2!1sfa!2s" style="border:0;
-  border-radius: 10px !important;" allowfullscreen="" referrerpolicy="strict-origin-when-cross-origin"
-                            class="iframe-1"></iframe>
-                    </div>
-
-                    <!-- 🛍️ فروشگاه -->
-                    <div class="r6-contact-card">
-                        <div class="r6-contact-header">
-                            <span class="r6-contact-icon" style="background: #fff3e0; color: #e65100;">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 22V12h6v10" />
-                                </svg>
-                            </span>
-                            <h4>فروشگاه</h4>
-                        </div>
-                        <div class="r6-contact-body">
-                            <p><strong>آدرس:</strong> بازار بزرگ تهران — بازار عباس‌آباد، سرای لطفی‌پور، پلاک ۲۲</p>
-                            <p><strong>موبایل / واتساپ:</strong> <span dir="ltr">۰۹۱۹۷۶۹۳۱۴۹</span></p>
-                            <br>
-                            <a href="https://www.google.com/maps/search/%D8%A8%D8%A7%D8%B2%D8%A7%D8%B1+%D8%B9%D8%A8%D8%A7%D8%B3+%D8%A2%D8%A8%D8%A7%D8%AF+%D8%AA%D9%87%D8%B1%D8%A7%D9%86+%D8%AC%D9%88%D8%B1%D8%A7%D8%A8%E2%80%AD/@35.6708649,51.4196369,20z?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D" target="_blank">رفتن به آدرس</a>
-                        </div>
-                        <br>
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m16!1m12!1m3!1d405.15615301410713!2d51.41963694909274!3d35.67086489391551!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!2m1!1z2KjYp9iy2KfYsSDYudio2KfYsyDYotio2KfYryDYqtmH2LHYp9mGINis2YjYsdin2Kg!5e0!3m2!1sfa!2s!4v1793643075483!5m2!1sfa!2s" style="border:0;  border-radius: 10px !important;"></iframe>
-                    </div>
-
-                </div>
-
-                <!-- کپی‌رایت -->
-                <div class="r6-footer-bottom">
-                    <span>&copy;طراحی و سئو <b><i> Thurnder_Web ⚡ </i></b></span>
                 </div>
 
             </div>
-
-        </div>
-    </footer>
+        </footer>
+    <?php endif; ?>
 
     <!-- ═══ Modal ورود / ثبت‌نام / فراموشی رمز ═══ -->
     <div class="auth-modal-overlay" id="authModalOverlay">
@@ -675,7 +650,7 @@ if ($isLoggedIn) {
                     <div class="form-field">
                         <label>رمز عبور <i>*</i></label>
                         <input type="password" name="password" dir="ltr"
-                            autocomplete="new-password" placeholder="حداقل ۸ کاراکتر" required>
+                            autocomplete="new-password" placeholder="حداقل ۴ کاراکتر" required>
                     </div>
 
                     <div class="form-field">
@@ -749,7 +724,7 @@ if ($isLoggedIn) {
                     <div class="form-field">
                         <label>رمز عبور جدید</label>
                         <input type="password" id="forgotNewPass" dir="ltr"
-                            placeholder="حداقل ۸ کاراکتر" required>
+                            placeholder="حداقل ۴ کاراکتر" required>
                     </div>
                     <div class="form-field">
                         <label>تکرار رمز عبور جدید</label>
@@ -779,7 +754,6 @@ if ($isLoggedIn) {
         </div>
     </div>
 
-    <!-- ═══ نوار پایین موبایل (مثل دیجی‌کالا) ═══ -->
 
     <nav class="mobile-bottom-nav" aria-label="دسترسی سریع">
 
@@ -835,7 +809,8 @@ if ($isLoggedIn) {
             id="socialToggle"
             role="button"
             aria-expanded="false"
-            aria-label="کانال‌های ارتباطی">
+            aria-label="کانال‌های ارتباطی"
+            onclick="toggleSocialPopup(event)">
             <span class="mbn-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" />
@@ -867,9 +842,70 @@ if ($isLoggedIn) {
         </a>
     </div>
 
+    <script>
+        /* ⭐ FIX: باز شدن کانال‌های ارتباطی در همه صفحات (از جمله صفحه اصلی) */
+        (function() {
+            function toggleSocialPopup(e) {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                const popup = document.getElementById('socialPopup');
+                const toggle = document.getElementById('socialToggle');
+
+                if (!popup || !toggle) return;
+
+                const isOpen = popup.classList.contains('is-open') || popup.getAttribute('aria-hidden') === 'false';
+
+                if (isOpen) {
+                    popup.classList.remove('is-open');
+                    popup.setAttribute('aria-hidden', 'true');
+                    popup.setAttribute('inert', '');
+                    toggle.setAttribute('aria-expanded', 'false');
+                } else {
+                    popup.classList.add('is-open');
+                    popup.setAttribute('aria-hidden', 'false');
+                    popup.removeAttribute('inert');
+                    toggle.setAttribute('aria-expanded', 'true');
+                }
+            }
+
+            // در دسترس قرار دادن برای onclick
+            window.toggleSocialPopup = toggleSocialPopup;
+
+            // کلیک روی خود پاپ‌آپ یا بیرون آن برای بستن
+            document.addEventListener('click', function(e) {
+                const popup = document.getElementById('socialPopup');
+                const toggle = document.getElementById('socialToggle');
+
+                if (!popup || !toggle) return;
+
+                if (popup.classList.contains('is-open') &&
+                    !popup.contains(e.target) &&
+                    !toggle.contains(e.target)) {
+                    toggleSocialPopup();
+                }
+            });
+
+            // پشتیبانی از دکمه Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const popup = document.getElementById('socialPopup');
+                    if (popup && popup.classList.contains('is-open')) {
+                        toggleSocialPopup();
+                    }
+                }
+            });
+        })();
+    </script>
+
     <script src="/assets/js/jalali.js" defer></script>
 
-    <!-- ⭐ defer → اجرا بعد از پارس HTML (TBT کمتر) | v1008 = لود PricingService + سطح مشتری در هدر -->
+    <script>
+        window.RABETI_AUTH = <?= $isLoggedIn ? 'true' : 'false' ?>;
+    </script>
+
     <script src="/assets/js/app.js?v=1008" defer></script>
 
 </body>

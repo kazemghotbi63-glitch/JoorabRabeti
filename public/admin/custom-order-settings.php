@@ -105,30 +105,7 @@ class CustomOrderSettings
 /* ═══════════════════════════════════════════════════════════════
    گارد ادمین
 ═══════════════════════════════════════════════════════════════ */
-$coAdmin = false;
-if (function_exists('is_admin')) {
-    try {
-        $coAdmin = (bool)is_admin();
-    } catch (Throwable $e) {
-        $coAdmin = false;
-    }
-} elseif (function_exists('current_user_is_admin')) {
-    try {
-        $coAdmin = (bool)current_user_is_admin();
-    } catch (Throwable $e) {
-        $coAdmin = false;
-    }
-}
-if (!$coAdmin) {
-    $role = strtolower((string)($_SESSION['user_role'] ?? $_SESSION['role'] ?? ''));
-    $coAdmin = in_array($role, ['admin', 'superadmin', '1', 'manager'], true)
-        || !empty($_SESSION['admin_id'])
-        || !empty($_SESSION['is_admin']);
-}
-if (!$coAdmin) {
-    http_response_code(403);
-    exit('دسترسی مجاز نیست');
-}
+require_admin();
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
