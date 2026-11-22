@@ -180,7 +180,7 @@ ob_start();
 <!-- ═══ سربرگ ═══ -->
 <section class="page-head">
     <h1 class="section-title"><?= $activeCat ? $h($activeCat['name']) : 'همه محصولات' ?></h1>
-    <p class="section-sub"><?= $numFa(count($products)) ?>  بدون واسطه - مستقیم از درب کارخانه</p>
+    <p class="section-sub"><?= $numFa(count($products)) ?>   محصول بدون واسطه - مستقیم از درب  کارخانه </p>
 </section>
 
 <!-- ═══ Breadcrumb ═══ -->
