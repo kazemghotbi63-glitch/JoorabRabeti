@@ -212,6 +212,7 @@ img {
 }
 
 .container {
+  padding-top: 20px;
   width: 100%;
   max-width: 1280px;
   margin-inline: auto;
@@ -1226,7 +1227,7 @@ body.app-body {
 .r6-hero-img {
   width: 100%;
   height: auto;
-  aspect-ratio: 16 / 9; /* همان نسبت تصویر اصلی */
+  aspect-ratio: 16 / 9; 
   object-fit: cover;
 }
 
@@ -1497,14 +1498,6 @@ body.app-body {
   inset: 0;
 
   z-index: 1;
-
-  background: linear-gradient(
-    to top,
-    rgba(245, 239, 228, 0.97) 0%,
-    rgba(245, 239, 228, 0.82) 25%,
-    rgba(245, 239, 228, 0.2) 55%,
-    rgba(245, 239, 228, 0) 75%
-  );
 
   pointer-events: none;
 }
@@ -6035,6 +6028,7 @@ body {
   }
 
   .container {
+    padding-top: 15px;
     padding-inline: 13px;
   }
 
@@ -7864,3 +7858,74 @@ aside.r6-drawer#drawer::before {
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 }
+.toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #0f172a;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 99999;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+/* بنر با افکت سه‌بعدی ثابت (bevel) */  
+.r6-hero {  
+  border-radius: 24px;  
+  margin: 16px auto;  
+  max-width: 1280px;  
+  overflow: hidden;  
+  position: relative;  
+  
+  /* عمق بیرونی */  
+  box-shadow:  
+    0 20px 45px rgba(27, 63, 80, 0.28),  
+    0 6px 14px rgba(27, 63, 80, 0.18),  
+    /* لبه روشن بالا (highlight) */  
+    inset 0 2px 2px rgba(255, 255, 255, 0.55),  
+    /* لبه تیره پایین (bevel) */  
+    inset 0 -3px 6px rgba(27, 63, 80, 0.25);  
+}  
+  
+/* براقیت شیشه‌ای روی سطح — حس برجستگی */  
+.r6-hero::before {  
+  content: "";  
+  position: absolute;  
+  inset: 0;  
+  z-index: 2;  
+  pointer-events: none;  
+  border-radius: inherit;  
+  background: linear-gradient(  
+    to bottom,  
+    rgba(255, 255, 255, 0.22) 0%,  
+    rgba(255, 255, 255, 0.05) 18%,  
+    rgba(255, 255, 255, 0) 35%,  
+    rgba(0, 0, 0, 0.08) 100%  
+  );  
+}  
+  
+/* حذف کامل لایه روشن قبلی */  
+.r6-hero-fade {  
+  display: none;  
+}  
+  
+/* موبایل */  
+@media (max-width: 768px) {  
+  .r6-hero {  
+    border-radius: 16px;  
+    margin: 10px;  
+  }  
+}  

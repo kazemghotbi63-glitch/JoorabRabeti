@@ -151,8 +151,9 @@ $moneyFa = static function ($amount): string {
     return $formatted . ' تومان';
 };
 
-$h = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
-
+$h = static function ($v) {
+    return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+};
 $jalali = static function (?string $mysqlDate, bool $withTime = false): string {
     if (!$mysqlDate) return '—';
     $ts = strtotime($mysqlDate);
@@ -188,6 +189,8 @@ $statusLabels = [
     'packed'         => 'بسته بندی و آماده تحویل',
     'shipped-pik'    => 'تحویل پیک جهت ارسال',
     'shipped-post'   => 'تحویل پست جهت ارسال',
+    'shipped-barbari' => 'تحویل باربری جهت ارسال',
+    'shipped-tipax'  => 'تحویل تیپاکس جهت ارسال',
     'shipped'        => 'ارسال شد',
     'delivered'      => 'تحویل شد',
     'cancelled'      => 'لغو شده',
@@ -198,7 +201,7 @@ $filterGroups = [
     'all'          => ['label' => 'همه', 'statuses' => []],
     'pending'      => ['label' => 'در انتظار تأیید مالی', 'statuses' => ['pending_review']],
     'processing'   => ['label' => 'در حال پردازش', 'statuses' => ['processing', 'packed']],
-    'shipped'      => ['label' => 'ارسال‌شده', 'statuses' => ['shipped-pik', 'shipped-post', 'shipped']],
+    'shipped'      => ['label' => 'ارسال‌شده', 'statuses' => ['shipped-pik', 'shipped-post', 'shipped-barbari', 'shipped-tipax', 'shipped']],
     'delivered'    => ['label' => 'تحویل‌شده', 'statuses' => ['delivered']],
     'cancelled'    => ['label' => 'لغوشده', 'statuses' => ['cancelled']],
 ];
@@ -268,8 +271,12 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* ═══ تجمیع مالی همه فاکتورهای سفارش‌ها در یک کوئری ═══ */
 $orderFinancials = [];
-$orderIds = array_map(static fn($order) => (int)$order['id'], $orders);
-
+$orderIds = array_map(
+    static function ($order) {
+        return (int)$order['id'];
+    },
+    $orders
+);
 if ($orderIds) {
     $inPlaceholders = implode(',', array_fill(0, count($orderIds), '?'));
     $financialSql = "
@@ -331,15 +338,29 @@ $backQuery = implode('&', $qsParts);
 /* ─── مراحل پیگیری سفارش (برای نوار پیشرفت) ─── */
 $statusSteps = ['pending_review', 'processing', 'packed', 'shipped', 'delivered'];
 $statusStepIndex = static function (string $status) use ($statusSteps): int {
-    return match ($status) {
-        'pending_review'           => 0,
-        'processing'               => 1,
-        'packed'                   => 2,
-        'shipped', 'shipped-pik',
-        'shipped-post'             => 3,
-        'delivered'                => 4,
-        default                    => -1, // cancelled  
-    };
+    switch ($status) {
+    case 'pending_review':
+        return 0;
+
+    case 'processing':
+        return 1;
+
+    case 'packed':
+        return 2;
+
+    case 'shipped':
+    case 'shipped-pik':
+    case 'shipped-post':
+    case 'shipped-barbari':
+    case 'shipped-tipax':
+        return 3;
+
+    case 'delivered':
+        return 4;
+
+    default:
+        return -1;
+}
 };
 
 $pageTitle = 'سفارش‌های من | رابطی';
@@ -452,14 +473,16 @@ ob_start();
                     && !$hasPending);
 
                 $badgeClass = [
-                    'pending_review' => 'rbt-st-pending',
-                    'processing'     => 'rbt-st-processing',
-                    'packed'         => 'rbt-st-processing',
-                    'shipped'        => 'rbt-st-shipped',
-                    'shipped-pik'    => 'rbt-st-shipped',
-                    'shipped-post'   => 'rbt-st-shipped',
-                    'delivered'      => 'rbt-st-delivered',
-                    'cancelled'      => 'rbt-st-cancelled',
+                    'pending_review'   => 'rbt-st-pending',
+                    'processing'       => 'rbt-st-processing',
+                    'packed'           => 'rbt-st-processing',
+                    'shipped'          => 'rbt-st-shipped',
+                    'shipped-pik'      => 'rbt-st-shipped',
+                    'shipped-post'     => 'rbt-st-shipped',
+                    'shipped-barbari'  => 'rbt-st-shipped',
+                    'shipped-tipax'    => 'rbt-st-shipped',
+                    'delivered'        => 'rbt-st-delivered',
+                    'cancelled'        => 'rbt-st-cancelled',
                 ][$o['status']] ?? 'rbt-st-pending';
             ?>
                 <article class="rbt-order-card <?= $isCancelled ? 'is-cancelled' : '' ?>">
@@ -472,7 +495,7 @@ ob_start();
                         </div>
                         <span class="rbt-badge <?= $badgeClass ?>">
                             <span class="rbt-badge-dot"></span>
-                            <?= $h($statusLabels[$o['status']] ?? 'وضعیت نامشخص') ?>
+                            <?= $h($statusLabels[$o['status']] ?? 'وضعیت نامشخص: [' . $o['status'] . ']') ?>
                         </span>
                     </div>
 

@@ -10,7 +10,7 @@ if (!class_exists('SmsService', false)) {
 final class OrderSmsService
 {
     /**
-     * ارسال پیامک تأیید ثبت سفارش
+     * ارسال پیامک تأیید ثبت سفارش (Pattern 2685)
      */
     public static function orderApproved(int $orderId, array $fin = []): array
     {
@@ -32,7 +32,6 @@ final class OrderSmsService
             throw new RuntimeException('Pattern تأیید سفارش تنظیم نشده است.');
         }
 
-        /* ⭐ event یهتا با timestamp — هر تأیید پیامک خودش رو داره */
         $uniqueEvent = 'order_approved_' . date('YmdHis');
 
         if (self::alreadySent($orderId, $uniqueEvent, $patternId)) {
@@ -50,7 +49,9 @@ final class OrderSmsService
     }
 
     /**
-     * ارسال پیامک «ارسال شد»
+     * ارسال پیامک «ارسال شد» با Pattern (Pattern 2823 — روش اصلی)
+     *
+     * متغیرها: order, date, time — هرکدام حداکثر ۳۰ کاراکتر
      */
     public static function orderShipping(int $orderId): array
     {
@@ -68,17 +69,20 @@ final class OrderSmsService
 
         $patternId = Setting::getInt('sms_pattern_order_shipping', 0);
 
+        // اگر پترن تنظیم نشده بود، به نسخه plain سوئیچ کن
         if ($patternId <= 0) {
-            throw new RuntimeException('Pattern پیامک ارسال سفارش تنظیم نشده است.');
+            return self::orderShippingPlain($orderId);
         }
+
         $statusEventMap = [
-            'packed'            => 'order_shipping_packed',
-            'shipped-pik'       => 'order_shipping_pik',
-            'shipped-post'      => 'order_shipping_post',
-            'shipped-tipax'     => 'order_shipping_tipax',
-            'shipped-barbari'   => 'order_shipping_barbari',
-            'shipped'           => 'order_shipping_general',
+            'packed'          => 'order_shipping_packed',
+            'shipped-pik'     => 'order_shipping_pik',
+            'shipped-post'    => 'order_shipping_post',
+            'shipped-tipax'   => 'order_shipping_tipax',
+            'shipped-barbari' => 'order_shipping_barbari',
+            'shipped'         => 'order_shipping_general',
         ];
+
         $currentStatus = (string)($order['status'] ?? '');
         $event = $statusEventMap[$currentStatus] ?? 'order_shipping';
 
@@ -90,6 +94,45 @@ final class OrderSmsService
             $mobile,
             $patternId,
             self::orderShippingVariables($order),
+            (int)$order['user_id'],
+            $orderId,
+            $event
+        );
+    }
+
+    /**
+     * ارسال پیامک «ارسال شد» بدون Pattern (fallback — متن در PHP ساخته می‌شود)
+     */
+    public static function orderShippingPlain(int $orderId): array
+    {
+        $order = self::getOrder($orderId);
+
+        if (!$order) {
+            throw new RuntimeException('سفارش پیدا نشد.');
+        }
+
+        $mobile = self::resolveMobile($order);
+
+        if ($mobile === '') {
+            throw new RuntimeException('شماره موبایل مشتری پیدا نشد.');
+        }
+
+        $currentStatus = (string)($order['status'] ?? '');
+        $event = 'order_shipping_' . str_replace('-', '_', $currentStatus);
+
+        if (self::alreadySent($orderId, $event, 0)) {
+            return ['success' => true, 'skipped' => true, 'reason' => 'already_sent'];
+        }
+
+        $text = 'باسلام، سفارش شما به شماره: '
+            . $order['order_number']
+            . ' در تاریخ ' . self::jalaliDate()
+            . ' و ساعت ' . self::timeFa()
+            . ' ارسال شد. باتشکر از خرید شما - تولیدی جوراب رابطی';
+
+        return SmsService::sendPlain(
+            $mobile,
+            $text,
             (int)$order['user_id'],
             $orderId,
             $event
@@ -127,18 +170,16 @@ final class OrderSmsService
      */
     private static function resolveMobile(array $order): string
     {
-        /* ⭐ اولویت به شماره کاربر (صاحب حساب) */
         $mobile = trim((string)($order['user_mobile'] ?? ''));
         if ($mobile !== '') {
             return $mobile;
         }
-        /* اگه شماره کاربر نبود، از شماره گیرنده استفاده کن */
         return trim((string)($order['shipping_mobile'] ?? ''));
     }
 
     /**
-     * ⭐ متغیرهای Pattern تأیید پرداخت (2685)
-     *    ORDER, DATE, PAID, REMAINING, STATUS
+     * متغیرهای Pattern تأیید پرداخت (2685)
+     * ORDER, DATE, PAID, REMAINING, STATUS
      */
     private static function orderApprovedVariables(array $order, array $fin = []): array
     {
@@ -163,20 +204,65 @@ final class OrderSmsService
     }
 
     /**
-     * ⭐ متغیرهای Pattern ارسال سفارش (2691)
-     *    ORDER, DATE, TIME
+     * ⭐ متغیرهای Pattern ارسال سفارش (Pattern 2823)
+     * کلیدها دقیقاً: order, date, time
+     * هر مقدار حداکثر ۳۰ کاراکتر (چندبایتی)
      */
     private static function orderShippingVariables(array $order): array
     {
         return [
-            'ORDER' => (string)$order['order_number'],
-            'DATE'  => self::jalaliDate(),
-            'TIME'  => self::timeFa(),
+            'order' => self::clamp(self::toEnglishDigits((string)$order['order_number']), 30),
+            'date'  => self::clamp(self::jalaliDate(), 30),
+            'time'  => self::clamp(self::timeFa(), 30),
         ];
     }
 
     /**
-     * تبدیل تاریخ میلادی به شمسی
+     * برش امن رشته به حداکثر طول مجاز (چندبایتی UTF-8)
+     */
+    private static function clamp(string $value, int $maxLen): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '—';
+        }
+        if (mb_strlen($value, 'UTF-8') <= $maxLen) {
+            return $value;
+        }
+        return mb_substr($value, 0, $maxLen, 'UTF-8');
+    }
+
+    /**
+     * تبدیل ارقام فارسی/عربی به انگلیسی (برای شماره سفارش)
+     */
+    private static function toEnglishDigits(string $value): string
+    {
+        return strtr($value, [
+            '۰' => '0',
+            '۱' => '1',
+            '۲' => '2',
+            '۳' => '3',
+            '۴' => '4',
+            '۵' => '5',
+            '۶' => '6',
+            '۷' => '7',
+            '۸' => '8',
+            '۹' => '9',
+            '٠' => '0',
+            '١' => '1',
+            '٢' => '2',
+            '٣' => '3',
+            '٤' => '4',
+            '٥' => '5',
+            '٦' => '6',
+            '٧' => '7',
+            '٨' => '8',
+            '٩' => '9',
+        ]);
+    }
+
+    /**
+     * تبدیل تاریخ میلادی به شمسی (با ارقام فارسی)
      */
     private static function jalaliDate(): string
     {
@@ -217,7 +303,7 @@ final class OrderSmsService
     }
 
     /**
-     * ⭐ ساعت فعلی به فارسی
+     * ساعت فعلی به فارسی
      */
     private static function timeFa(): string
     {

@@ -16,6 +16,8 @@ declare(strict_types=1);
 final class SmsService
 {
     private const API_URL = 'https://api-payamak.com/api/v3/rest/sms/pattern-send';
+    private const API_URL_PLAIN = 'https://api-payamak.com/api/v3/rest/sms/send';
+
 
     /**
      * ارسال پیامک Pattern
@@ -54,27 +56,7 @@ final class SmsService
             throw new RuntimeException('کلید API پیامک تنظیم نشده است.');
         }
 
-        /*
-         * Payamak برای Pattern انتظار JSON در message دارد.
-         *
-         * مثال:
-         * {
-         *     "CODE": "123456"
-         * }
-         */
-        $message = json_encode(
-            $variables,
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-        );
-
-        if ($message === false) {
-            throw new RuntimeException('ساخت متغیرهای پیامک ناموفق بود.');
-        }
-
-        /*
-         * ابتدا Log را با وضعیت pending ثبت می‌کنیم.
-         * این کار باعث می‌شود حتی در صورت خطای API نیز سابقه تلاش وجود داشته باشد.
-         */
+        // ─── لاگ اولیه ───
         $logId = self::createLog(
             $userId,
             $orderId,
@@ -84,10 +66,11 @@ final class SmsService
             $variables
         );
 
+        // ─── مهم: message را مستقیم به صورت array بفرست (نه json_encode شده) ───
         $payload = [
             'from'       => $from,
             'recipients' => [$mobile],
-            'message'    => $message,
+            'message'    => $variables,
             'pattern_id' => $patternId,
         ];
 
@@ -112,7 +95,6 @@ final class SmsService
             CURLOPT_TIMEOUT        => 15,
             CURLOPT_CONNECTTIMEOUT => 10,
         ]);
-
         $response = curl_exec($ch);
 
         if ($response === false) {
@@ -152,18 +134,6 @@ final class SmsService
             );
         }
 
-        /*
- * Payamak ممکن است HTTP 200 بدهد،
- * اما داخل response اعلام کند که ارسال ناموفق بوده است.
- *
- * مثال:
- * {
- *   "return": {
- *      "status": 400,
- *      "message": "خطا در ارسال پیام: کد 29"
- *   }
- * }
- */
         $payamakStatus = null;
         $payamakMessage = null;
 
@@ -219,9 +189,107 @@ final class SmsService
         ];
     }
 
-    /**
-     * نرمال‌سازی شماره موبایل
-     */
+
+
+    public static function sendPlain(
+        string $mobile,
+        string $text,
+        ?int $userId = null,
+        ?int $orderId = null,
+        string $event = 'manual_plain'
+    ): array {
+        $mobile = self::normalizeMobile($mobile);
+
+        if (!preg_match('/^09\d{9}$/', $mobile)) {
+            throw new InvalidArgumentException('شماره موبایل معتبر نیست.');
+        }
+
+        if (trim($text) === '') {
+            throw new InvalidArgumentException('متن پیامک خالی است.');
+        }
+
+        $apiKey = Setting::get('sms_api_key');
+        $from   = Setting::get('asa_from');
+
+        if ($apiKey === '') {
+            throw new RuntimeException('کلید API پیامک تنظیم نشده است.');
+        }
+
+        $logId = self::createLog($userId, $orderId, $mobile, 0, $event, ['text' => $text]);
+
+        $payload = [
+            'from'       => $from,
+            'recipients' => [$mobile],
+            'message'    => $text,
+        ];
+
+        $ch = curl_init(self::API_URL_PLAIN);
+
+        if ($ch === false) {
+            self::markFailed($logId, 'امکان ایجاد اتصال cURL وجود ندارد.');
+            throw new RuntimeException('امکان اتصال به سرویس پیامک وجود ندارد.');
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: ' . $apiKey,
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_CONNECTTIMEOUT => 10,
+        ]);
+
+        $response = curl_exec($ch);
+
+        if ($response === false) {
+            $curlError = curl_error($ch);
+            curl_close($ch);
+            self::markFailed($logId, $curlError);
+            throw new RuntimeException('خطا در ارتباط با سرویس پیامک: ' . $curlError);
+        }
+
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $safeResponse = substr((string)$response, 0, 5000);
+        $decoded = json_decode($response, true);
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            self::markFailed($logId, 'HTTP ' . $httpCode . ': ' . $safeResponse);
+            throw new RuntimeException('Payamak HTTP ' . $httpCode . ': ' . $safeResponse);
+        }
+
+        $payamakStatus = null;
+        $payamakMessage = null;
+
+        if (is_array($decoded) && isset($decoded['return']) && is_array($decoded['return'])) {
+            $payamakStatus = isset($decoded['return']['status']) ? (int)$decoded['return']['status'] : null;
+            $payamakMessage = isset($decoded['return']['message']) ? (string)$decoded['return']['message'] : null;
+        }
+
+        if ($payamakStatus !== null && $payamakStatus !== 200) {
+            $errorMessage = $payamakMessage !== null && $payamakMessage !== ''
+                ? $payamakMessage
+                : 'Payamak status: ' . $payamakStatus;
+            self::markFailed($logId, $errorMessage);
+            throw new RuntimeException($errorMessage);
+        }
+
+        $messageId = self::extractMessageId($decoded);
+        self::markSent($logId, $messageId, $safeResponse);
+
+        return [
+            'success'    => true,
+            'log_id'     => $logId,
+            'message_id' => $messageId,
+            'http_code'  => $httpCode,
+            'response'   => $decoded ?? $response,
+        ];
+    }
+
     private static function normalizeMobile(string $mobile): string
     {
         $mobile = trim($mobile);

@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             /* SMS (بعد از commit) — رویداد order_shipping_packed */
             if (!empty($result['event'])) {
                 try {
-                    OrderSmsService::orderShipping($orderId);
+                    OrderSmsService::orderShippingPlain($orderId);
                 } catch (Throwable $e) {
                     error_log('FULFILLMENT PACK SMS FAILED: ' . $e->getMessage());
                 }

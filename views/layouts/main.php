@@ -59,7 +59,7 @@ if ($isLoggedIn) {
     <!-- ═══ SEO ═══ -->
     <title>جوراب رابطی | تولیدکننده و فروش عمده جوراب</title>
 
-    <meta name="description" content="جوراب رابطی، تولیدکننده و عرضه‌کننده انواع جوراب مردانه، زنانه و بچگانه. خرید عمده جوراب با قیمت تولیدی، تخفیف همکاری و سفارش مستقیم از کارخانه." />
+    <meta name="description" content="جوراب رابطی، تولیدکننده و عرضه‌کننده انواع جوراب مردانه، زنانه و بچگانه. خرید عمده جوراب با قیمت تولیدی، تخفیف پلکانی و سفارش مستقیم از کارخانه." />
     <meta name="author" content="RABETI">
     <meta name="theme-color" content="#004f53">
     <link rel="canonical" href="https://joorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
@@ -68,7 +68,7 @@ if ($isLoggedIn) {
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="رابطی">
     <meta property="og:title" content="جوراب رابطی | تولیدکننده و فروش عمده جوراب" />
-    <meta property="og:description" content="تولید و عرضه انواع جوراب مردانه، زنانه و بچگانه با قیمت همکاری و سفارش مستقیم از کارخانه." />
+    <meta property="og:description" content="تولید و عرضه انواع جوراب مردانه، زنانه و بچگانه با تخفیف پلکانی و سفارش مستقیم از کارخانه." />
     <meta property="og:locale" content="fa_IR">
     <meta property="og:url" content="https://joorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
 
@@ -88,7 +88,7 @@ if ($isLoggedIn) {
     <link rel="mask-icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>" color="#004f53">
 
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=10014">
+    <link rel="stylesheet" href="/assets/css/app.css?v=10015">
 
     <?php
     // لود CSS اختصاصی صفحه تماس و درباره ما (فقط در همین دو صفحه)
@@ -107,7 +107,7 @@ if ($isLoggedIn) {
 
     <!-- ══════════ نوار اعلان ══════════ -->
 
-     <div class="r6-announce">
+    <div class="r6-announce">
         ارسال رایگان برای سفارش‌های بالای ۱۰ میلیون تومان
     </div>
 
@@ -435,12 +435,12 @@ if ($isLoggedIn) {
                                 <span class="r6-logo-en">RABETI</span>
                             </div>
                             <p>
-                                تولید و پخش عمده جوراب با قیمت همکاری،
+                                تولید و پخش عمده جوراب با تضمین کیفیت
                                 موجودی واقعی و ارسال سریع به سراسر ایران.
                             </p>
                             <div class="r6-footer-trust">
                                 <span>✓ تولید مستقیم</span>
-                                <span>✓ قیمت همکاری</span>
+                                <span>✓  تخفیف پلکانی</span>
                                 <span>✓ ارسال سریع</span>
                             </div>
                         </div>
@@ -686,11 +686,7 @@ if ($isLoggedIn) {
                             <b>ارسال به موبایل</b>
                             <small>کد پیامکی</small>
                         </button>
-                        <!-- <button type="button" class="forgot-channel" data-channel="email">
-                            <span class="fc-icon">📧</span>
-                            <b>ارسال به ایمیل</b>
-                            <small>کد ایمیلی</small>
-                        </button> -->
+
                     </div>
                 </div>
 
@@ -809,8 +805,7 @@ if ($isLoggedIn) {
             id="socialToggle"
             role="button"
             aria-expanded="false"
-            aria-label="کانال‌های ارتباطی"
-            onclick="toggleSocialPopup(event)">
+            aria-label="کانال‌های ارتباطی">
             <span class="mbn-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" />
@@ -845,56 +840,52 @@ if ($isLoggedIn) {
     <script>
         /* ⭐ FIX: باز شدن کانال‌های ارتباطی در همه صفحات (از جمله صفحه اصلی) */
         (function() {
-            function toggleSocialPopup(e) {
-                if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
+            const toggle = document.getElementById('socialToggle');
+            const popup = document.getElementById('socialPopup');
 
-                const popup = document.getElementById('socialPopup');
-                const toggle = document.getElementById('socialToggle');
+            if (!toggle || !popup) return;
 
-                if (!popup || !toggle) return;
-
-                const isOpen = popup.classList.contains('is-open') || popup.getAttribute('aria-hidden') === 'false';
-
-                if (isOpen) {
-                    popup.classList.remove('is-open');
-                    popup.setAttribute('aria-hidden', 'true');
-                    popup.setAttribute('inert', '');
-                    toggle.setAttribute('aria-expanded', 'false');
-                } else {
-                    popup.classList.add('is-open');
-                    popup.setAttribute('aria-hidden', 'false');
-                    popup.removeAttribute('inert');
-                    toggle.setAttribute('aria-expanded', 'true');
-                }
+            function openPopup() {
+                popup.classList.add('is-open');
+                popup.setAttribute('aria-hidden', 'false');
+                popup.removeAttribute('inert');
+                toggle.setAttribute('aria-expanded', 'true');
             }
 
-            // در دسترس قرار دادن برای onclick
-            window.toggleSocialPopup = toggleSocialPopup;
+            function closePopup() {
+                popup.classList.remove('is-open');
+                popup.setAttribute('aria-hidden', 'true');
+                popup.setAttribute('inert', '');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
 
-            // کلیک روی خود پاپ‌آپ یا بیرون آن برای بستن
-            document.addEventListener('click', function(e) {
-                const popup = document.getElementById('socialPopup');
-                const toggle = document.getElementById('socialToggle');
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
 
-                if (!popup || !toggle) return;
-
-                if (popup.classList.contains('is-open') &&
-                    !popup.contains(e.target) &&
-                    !toggle.contains(e.target)) {
-                    toggleSocialPopup();
+                if (popup.classList.contains('is-open')) {
+                    closePopup();
+                } else {
+                    openPopup();
                 }
             });
 
-            // پشتیبانی از دکمه Escape
+            popup.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            document.addEventListener('click', function(e) {
+                if (
+                    !toggle.contains(e.target) &&
+                    !popup.contains(e.target)
+                ) {
+                    closePopup();
+                }
+            });
+
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
-                    const popup = document.getElementById('socialPopup');
-                    if (popup && popup.classList.contains('is-open')) {
-                        toggleSocialPopup();
-                    }
+                    closePopup();
                 }
             });
         })();
@@ -907,6 +898,8 @@ if ($isLoggedIn) {
     </script>
 
     <script src="/assets/js/app.js?v=1008" defer></script>
+    <!-- ═══ Toast ═══ -->
+    <div id="toast" class="toast"></div>
 
 </body>
 

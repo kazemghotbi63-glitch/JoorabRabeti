@@ -15,8 +15,9 @@ require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/PricingService.php';
 
-$h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
-
+$h = static function ($v) {
+    return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+};
 $catSlug     = trim($_GET['cat'] ?? '');
 $searchQuery = trim((string)($_GET['q'] ?? ''));
 $activeCat   = null;
@@ -160,7 +161,7 @@ $products = $stmt->fetchAll();
  * عنوان صفحه
  * ============================================================ */
 $pageTitle = ($activeCat ? $activeCat['name'] . ' — ' : '') . 'کاتالوگ محصولات | رابطی';
-$pageDescription = 'خرید عمده جوراب مردانه، زنانه، بچگانه و اسپرت رابطی با موجودی واقعی و قیمت همکاری.';
+$pageDescription = 'خرید عمده جوراب مردانه، زنانه، بچگانه و اسپرت رابطی با موجودی واقعی و قیمت با تخفیف پلکانی.';
 $canonicalPath = $activeCat ? '/products?cat=' . rawurlencode($activeCat['slug']) : '/products';
 if ($searchQuery !== '') {
     $metaRobots = 'noindex, follow';
@@ -179,7 +180,7 @@ ob_start();
 <!-- ═══ سربرگ ═══ -->
 <section class="page-head">
     <h1 class="section-title"><?= $activeCat ? $h($activeCat['name']) : 'همه محصولات' ?></h1>
-    <p class="section-sub"><?= $numFa(count($products)) ?> مدل — قیمت همکاری، مستقیم از تولیدی</p>
+    <p class="section-sub"><?= $numFa(count($products)) ?>  بدون واسطه - مستقیم از درب کارخانه</p>
 </section>
 
 <!-- ═══ Breadcrumb ═══ -->
@@ -412,7 +413,7 @@ $chipCats = db()->query("
                                 <span class="prod-price-now" data-price-final style="font-size:1.15rem;font-weight:900;color:#004f53;">
                                     <?= $moneyFa($finalUnitPrice) ?>
                                 </span>
-                                <small class="prod-price-base" style="display:block;margin-top:4px;font-size:0.7rem;color:#8b7355;">قیمت همکاری</small>
+                                <small class="prod-price-base" style="display:block;margin-top:4px;font-size:0.7rem;color:#8b7355;"> با تخفیف پلکانی</small>
                             <?php endif; ?>
                         <?php else: ?>
                             <span class="prod-price-now" style="font-size:1.05rem;font-weight:800;color:#b8860b;">استعلام قیمت</span>

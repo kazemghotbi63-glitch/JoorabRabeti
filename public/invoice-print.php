@@ -21,7 +21,9 @@ require_once __DIR__ . '/../config/auth.php';
 require_once ROOT_PATH . '/app/services/InvoiceService.php';
 $db = db();
 
-$h = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+$h = static function ($v) {
+    return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+};
 
 $moneyFa = static function ($amount): string {
     $formatted = number_format((int)$amount);
@@ -76,24 +78,44 @@ $dateOnlyFa = static function ($value) use ($dateTimeFa): string {
 };
 
 $statusLabel = static function (string $status): string {
-    return match ($status) {
-        'pending'   => 'در انتظار تأیید مالی',
-        'verified'  => 'تأیید شده',
-        'adjusted'  => 'اصلاح شده',
-        'rejected'  => 'رد شده',
-        'confirmed' => 'تأیید شده',
-        default     => 'نامشخص',
-    };
+    switch ($status) {
+        case 'pending':
+            return 'در انتظار تأیید مالی';
+
+        case 'verified':
+            return 'تأیید شده';
+
+        case 'adjusted':
+            return 'اصلاح شده';
+
+        case 'rejected':
+            return 'رد شده';
+
+        case 'confirmed':
+            return 'تأیید شده';
+
+        default:
+            return 'نامشخص';
+    }
 };
 
 $methodLabel = static function (string $method): string {
-    return match ($method) {
-        'sheba'         => 'انتقال با شبا',
-        'card_to_card'  => 'کارت به کارت',
-        'cash_receipt'  => 'فیش نقدی',
-        'online'        => 'درگاه پرداخت آنلاین',
-        default         => 'پرداخت',
-    };
+    switch ($method) {
+        case 'sheba':
+            return 'انتقال با شبا';
+
+        case 'card_to_card':
+            return 'کارت به کارت';
+
+        case 'cash_receipt':
+            return 'فیش نقدی';
+
+        case 'online':
+            return 'درگاه پرداخت آنلاین';
+
+        default:
+            return 'پرداخت';
+    }
 };
 
 /* ═══ احراز هویت ═══ */

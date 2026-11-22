@@ -18,11 +18,8 @@ require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/settings.php';
 
 
-$h = static fn($v) => htmlspecialchars(
-    (string)$v,
-    ENT_QUOTES,
-    'UTF-8'
-);
+$h = static function ($v) {return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+};
 
 $categories = db()->query("
     SELECT *
@@ -483,7 +480,7 @@ ob_start();
 
             <p>
                 تأمین مستقیم از تولیدکننده؛
-                قیمت همکاری، موجودی واقعی و سفارش سریع
+                قیمت همکاری با تخفیف پلکانی، موجودی واقعی و سفارش سریع
             </p>
 
             <a
@@ -802,7 +799,7 @@ ob_start();
                                 <span class="prod-price-now" data-price-final style="font-size:1.15rem;font-weight:900;color:#004f53;">
                                     <?= $moneyFa($finalUnitPrice) ?>
                                 </span>
-                                <small class="prod-price-base" style="display:block;margin-top:4px;font-size:0.7rem;color:#8b7355;">قیمت همکاری</small>
+                                <small class="prod-price-base" style="display:block;margin-top:4px;font-size:0.7rem;color:#8b7355;">تخفیف پلکانی </small>
                             <?php endif; ?>
                         <?php else: ?>
                             <span class="prod-price-now" style="font-size:1.05rem;font-weight:800;color:#b8860b;">استعلام قیمت</span>

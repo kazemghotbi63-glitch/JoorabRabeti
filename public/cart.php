@@ -1,14 +1,8 @@
 <?php
-/* ⭐ تعریف مسیر اصلی پروژه (برای جلوگیری از خطای ROOT_PATH) */
-if (!defined('ROOT_PATH')) {
-    define('ROOT_PATH', dirname(__DIR__));
-}
-
 /* Auto-detect bootstrap (local + host) */
 $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
-    ROOT_PATH . '/config/bootstrap.php',
 ];
 foreach ($__bp as $__b) {
     if (is_file($__b)) {
@@ -27,8 +21,9 @@ if (!is_customer_logged_in()) {
     exit;
 }
 
-$h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
-
+$h = static function ($v) {
+    return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+};
 $userId = (int)($_SESSION['customer_id'] ?? 0);
 $db = db();
 $userGroup = current_user_group();

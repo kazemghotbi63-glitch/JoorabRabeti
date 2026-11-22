@@ -49,7 +49,9 @@ $formatCardDisplay = static function (string $raw): string {
     return implode('-', str_split($raw, 4));
 };
 
-$h = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+$h = static function ($v) {
+    return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+};
 $moneyFa = static function ($amount, int $decimals = 0): string {
     $formatted = number_format((float)$amount, $decimals, '.', ',');
     $formatted = strtr($formatted, [
