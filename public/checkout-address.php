@@ -61,9 +61,10 @@ if (!function_exists('iran_provinces')) {
     }
 }
 
-/* ─── دسترسی ─── */
-if (!is_customer_logged_in()) {
-    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
+/* ─── دسترسی — ⭐ خرید مهمان‌پسند: مهمان هم می‌تواند آدرس ثبت کند ─── */
+$isCustomer = is_customer_logged_in();
+if (!$isCustomer && is_admin_logged_in()) {
+    header('Location: /admin');
     exit;
 }
 
@@ -71,17 +72,42 @@ $h      = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 $userId = (int)($_SESSION['customer_id'] ?? 0);
 $db     = db();
 
-/* ─── سبد باید پر باشد ─── */
-$stmt = $db->prepare("SELECT COUNT(*) FROM cart_items ci JOIN carts c ON c.id=ci.cart_id
-                      WHERE c.user_id=? AND c.status='active'");
-$stmt->execute([$userId]);
-if (!$stmt->fetchColumn()) {
+/* ─── سبد باید پر باشد (کاربر: DB — مهمان: session) ─── */
+if ($isCustomer) {
+    $stmt = $db->prepare("SELECT COUNT(*) FROM cart_items ci JOIN carts c ON c.id=ci.cart_id
+                          WHERE c.user_id=? AND c.status='active'");
+    $stmt->execute([$userId]);
+    $hasCart = (bool)$stmt->fetchColumn();
+} else {
+    $hasCart = !empty($_SESSION['guest_cart'])
+        && is_array($_SESSION['guest_cart'])
+        && array_sum($_SESSION['guest_cart']) > 0;
+}
+if (!$hasCart) {
     header('Location: /cart');
     exit;
 }
 
 /* ─── کنترل حداقل مجموع خرید محصولات جفتی ─── */
-$pairQty = PricingService::getPairQtyByUser($db, $userId);
+if ($isCustomer) {
+    $pairQty = PricingService::getPairQtyByUser($db, $userId);
+} else {
+    $pairQty = 0;
+    $gIds = array_map('intval', array_keys($_SESSION['guest_cart']));
+    if ($gIds) {
+        $gPh = implode(',', array_fill(0, count($gIds), '?'));
+        $stmt = $db->prepare("SELECT p.id,
+                COALESCE((SELECT spec_value FROM product_specs
+                          WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1), 'جفتی') AS unit_code
+            FROM products p WHERE p.id IN ($gPh)");
+        $stmt->execute($gIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if ($row['unit_code'] === 'جفتی') {
+                $pairQty += (int)$_SESSION['guest_cart'][$row['id']];
+            }
+        }
+    }
+}
 if (PricingService::violatesPairMinimum($pairQty)) {
     header('Location: /cart');
     exit;
@@ -127,23 +153,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'add') {
             throw new RuntimeException('شهر انتخاب‌شده با استان همخوانی ندارد.');
         }
 
-        $addressId = AddressService::create($userId, [
-            'label'           => $_POST['label'] ?? '',
-            'province'        => $oldProvince,
-            'city'            => $oldCity,
-            'address'         => $_POST['address'] ?? '',
-            'postal_code'     => trim($_POST['postal_code'] ?? ''),
-            'plate_no'        => trim($_POST['plate_no'] ?? ''),
-            'unit_no'         => trim($_POST['unit_no'] ?? ''),
-            'receiver_name'   => trim($_POST['receiver_name'] ?? ''),
-            'receiver_mobile' => strtr(
-                trim($_POST['receiver_mobile'] ?? ''),
-                ['۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9']
-            ),
-            'is_default'      => isset($_POST['is_default']),
-        ]);
+        if ($isCustomer) {
+            $addressId = AddressService::create($userId, [
+                'label'           => $_POST['label'] ?? '',
+                'province'        => $oldProvince,
+                'city'            => $oldCity,
+                'address'         => $_POST['address'] ?? '',
+                'postal_code'     => trim($_POST['postal_code'] ?? ''),
+                'plate_no'        => trim($_POST['plate_no'] ?? ''),
+                'unit_no'         => trim($_POST['unit_no'] ?? ''),
+                'receiver_name'   => trim($_POST['receiver_name'] ?? ''),
+                'receiver_mobile' => strtr(
+                    trim($_POST['receiver_mobile'] ?? ''),
+                    ['۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9']
+                ),
+                'is_default'      => isset($_POST['is_default']),
+            ]);
+            $_SESSION['checkout_address_id'] = $addressId;
+        } else {
+            /* ⭐ مهمان: آدرس در session ذخیره می‌شود؛ بعد از ورود/ثبت‌نام در
+               مرحلهٔ آخر، به‌صورت خودکار به آدرس واقعی مشتری ارتقا می‌یابد */
+            $_SESSION['checkout_guest_address'] = [
+                'label'           => trim($_POST['label'] ?? ''),
+                'province'        => $oldProvince,
+                'city'            => $oldCity,
+                'address'         => trim($_POST['address'] ?? ''),
+                'postal_code'     => trim($_POST['postal_code'] ?? ''),
+                'plate_no'        => trim($_POST['plate_no'] ?? ''),
+                'unit_no'         => trim($_POST['unit_no'] ?? ''),
+                'receiver_name'   => trim($_POST['receiver_name'] ?? ''),
+                'receiver_mobile' => strtr(
+                    trim($_POST['receiver_mobile'] ?? ''),
+                    ['۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9']
+                ),
+            ];
+            $_SESSION['checkout_address_id'] = 0;
+        }
 
-        $_SESSION['checkout_address_id'] = $addressId;
         header('Location: /checkout-shipping');
         exit;
     } catch (RuntimeException $e) {
@@ -152,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'add') {
 }
 
 /* ─── داده‌های نمایش ─── */
-$addresses  = AddressService::list($userId);
+$addresses  = $isCustomer ? AddressService::list($userId) : [];
 $selectedId = (int)($_SESSION['checkout_address_id'] ?? 0);
 
 $pageTitle = 'آدرس ارسال | رابطی';
@@ -199,6 +245,7 @@ ob_start();
     <a href="/cart">سبد</a> ›
     <span>آدرس ارسال</span>
 </nav>
+<script>try{sessionStorage.setItem('rabetiCheckout','1');}catch(e){}</script>
 
 <section class="catalog-head">
     <h1 class="catalog-title">آدرس ارسال سفارش</h1>
@@ -326,11 +373,13 @@ ob_start();
                 </div>
             </div>
 
+            <?php if ($isCustomer): ?>
             <label class="form-check">
                 <input type="checkbox" name="is_default" value="1"
                     <?= (($_POST['do'] ?? '') === 'add' && !isset($_POST['is_default'])) ? '' : 'checked' ?>>
                 این آدرس پیش‌فرض سفارش‌های بعدی باشد
             </label>
+            <?php endif; ?>
 
             <button type="submit" class="btn btn-primary co-submit">ذخیره و ادامه ←</button>
         </form>
@@ -412,4 +461,6 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
+// checkout.css: قوانین مشترک مراحل تسویه (checkout-) — فقط صفحات checkout
+$pageCss = ['/assets/css/checkout.css?v=1'];
 require ROOT_PATH . '/views/layouts/main.php';

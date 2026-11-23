@@ -226,7 +226,7 @@ ob_start();
 <?php endif; ?>
 
 <!-- ═══ سرچ پریمیوم ═══ -->
-<link rel="stylesheet" href="/assets/css/search-premium.css?v=1">
+<!-- search-premium.css از وسط body به <head> منتقل شد (از طریق $pageCss قبل از require main.php) -->
 <?php
 /* رفع N+1: یک کوئری برای شمارش همه چیپ‌ها */
 $chipCats = db()->query("
@@ -413,11 +413,11 @@ $chipCats = db()->query("
                                 <span class="prod-price-now" data-price-final style="font-size:1.15rem;font-weight:900;color:#004f53;">
                                     <?= $moneyFa($finalUnitPrice) ?>
                                 </span>
-                                <small class="prod-price-base" style="display:block;margin-top:4px;font-size:0.7rem;color:#8b7355;"> با تخفیف پلکانی</small>
+                                <small class="prod-price-base" style="display:block;margin-top:4px;font-size:0.7rem;color:#7d6446;"> با تخفیف پلکانی</small>
                             <?php endif; ?>
                         <?php else: ?>
-                            <span class="prod-price-now" style="font-size:1.05rem;font-weight:800;color:#b8860b;">استعلام قیمت</span>
-                            <small style="display:block;margin-top:4px;font-size:0.7rem;color:#8b7355;">برای قیمت تماس بگیرید</small>
+                            <span class="prod-price-now" style="font-size:1.05rem;font-weight:800;color:#936b08;">استعلام قیمت</span>
+                            <small style="display:block;margin-top:4px;font-size:0.7rem;color:#7d6446;">برای قیمت تماس بگیرید</small>
                         <?php endif; ?>
                     </div>
 
@@ -453,7 +453,7 @@ $chipCats = db()->query("
                             </div>
                         </div>
                     <?php elseif ($stock > 0 && !$priceAvailable): ?>
-                        <div class="field-hint" style="margin-top:8px;color:#b8860b;">برای این محصول با ما تماس بگیرید.</div>
+                        <div class="field-hint" style="margin-top:8px;color:#936b08;">برای این محصول با ما تماس بگیرید.</div>
                     <?php elseif ($stock === 0): ?>
                         <div class="field-hint" style="margin-top:8px;color:#c53d3d;">این محصول فعلاً موجود نیست.</div>
                     <?php else: ?>
@@ -759,4 +759,6 @@ $chipCats = db()->query("
 
 <?php
 $content = ob_get_clean();
+// search-premium.css: قوانین لیست محصولات با فیلتر جستجو — فقط صفحه products
+$pageCss = ['/assets/css/search-premium.css?v=1'];
 require ROOT_PATH . '/views/layouts/main.php';

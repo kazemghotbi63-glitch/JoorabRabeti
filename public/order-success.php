@@ -74,6 +74,9 @@ ob_start();
 
 </div>
 
+<!-- ⭐ فرآیند خرید تکمیل شد → فلگ checkout برای redirect ثبت‌نام پاک می‌شود -->
+<script>try{sessionStorage.removeItem('rabetiCheckout');}catch(e){}</script>
+
 <?php
 $content = ob_get_clean();
 require ROOT_PATH . '/views/layouts/main.php';

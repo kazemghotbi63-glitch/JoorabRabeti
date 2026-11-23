@@ -75,27 +75,30 @@ $slotFa = static function (string $range): string {
     return 'از ' . $fa($sh) . ' ' . $tod($sh) . ' تا ' . $fa($eh) . ' ' . $tod($eh);
 };
 
-/* ═══ احراز هویت ═══ */
-if (!is_customer_logged_in()) {
-    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
+/* ═══ احراز هویت — ⭐ خرید مهمان‌پسند: ورود/ثبت‌نام فقط در همین مرحلهٔ آخر ═══ */
+$isCustomer = is_customer_logged_in();
+if (!$isCustomer && is_admin_logged_in()) {
+    header('Location: /admin');
     exit;
 }
 header('X-Robots-Tag: noindex, nofollow, noarchive', true);
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
-$userId = (int)($_SESSION['customer_id'] ?? 0);
-if ($userId <= 0) {
-    header('Location: /');
-    exit;
-}
+$userId = $isCustomer ? (int)($_SESSION['customer_id'] ?? 0) : 0;
 
 $db = db();
 
 /* ═══ ۱) سشن ═══ */
 $addressId = (int)($_SESSION['checkout_address_id'] ?? 0);
 $shipping  = $_SESSION['checkout_shipping'] ?? null;
-$address   = $addressId > 0 ? AddressService::get($userId, $addressId) : null;
+if ($isCustomer) {
+    $address = $addressId > 0 ? AddressService::get($userId, $addressId) : null;
+} else {
+    $address = (isset($_SESSION['checkout_guest_address'])
+                && is_array($_SESSION['checkout_guest_address']))
+        ? $_SESSION['checkout_guest_address'] : null;
+}
 
 if (!$address || !is_array($shipping)) {
     header('Location: /checkout-address');
@@ -110,31 +113,64 @@ if ($shippingMethod === '') {
     exit;
 }
 
-/* ═══ ۲) سبد ═══ */
-$stmtItems = $db->prepare("
-    SELECT
-        ci.qty,
-        p.id AS product_id,
-        p.code,
-        p.name,
-        p.slug,
-        p.base_price,
-        p.base_moq,
-        p.is_active,
-        (SELECT spec_value FROM product_specs
-         WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code,
-        (SELECT image_path FROM product_images pi
-         WHERE pi.product_id = p.id
-         ORDER BY pi.is_main DESC, pi.sort_order ASC
-         LIMIT 1) AS image
-    FROM cart_items ci
-    JOIN carts c    ON c.id = ci.cart_id
-    JOIN products p ON p.id = ci.product_id
-    WHERE c.user_id = ? AND c.status = 'active'
-    ORDER BY ci.id ASC
-");
-$stmtItems->execute([$userId]);
-$cartItems = $stmtItems->fetchAll();
+/* ═══ ۲) سبد (کاربر: DB — مهمان: session) ═══ */
+if ($isCustomer) {
+    $stmtItems = $db->prepare("
+        SELECT
+            ci.qty,
+            p.id AS product_id,
+            p.code,
+            p.name,
+            p.slug,
+            p.base_price,
+            p.base_moq,
+            p.is_active,
+            (SELECT spec_value FROM product_specs
+             WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code,
+            (SELECT image_path FROM product_images pi
+             WHERE pi.product_id = p.id
+             ORDER BY pi.is_main DESC, pi.sort_order ASC
+             LIMIT 1) AS image
+        FROM cart_items ci
+        JOIN carts c    ON c.id = ci.cart_id
+        JOIN products p ON p.id = ci.product_id
+        WHERE c.user_id = ? AND c.status = 'active'
+        ORDER BY ci.id ASC
+    ");
+    $stmtItems->execute([$userId]);
+    $cartItems = $stmtItems->fetchAll();
+} else {
+    $guestCart = (isset($_SESSION['guest_cart']) && is_array($_SESSION['guest_cart']))
+        ? $_SESSION['guest_cart'] : [];
+    $cartItems = [];
+    $stmtItems = $db->prepare("
+        SELECT
+            p.id AS product_id,
+            p.code,
+            p.name,
+            p.slug,
+            p.base_price,
+            p.base_moq,
+            p.is_active,
+            (SELECT spec_value FROM product_specs
+             WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code,
+            (SELECT image_path FROM product_images pi
+             WHERE pi.product_id = p.id
+             ORDER BY pi.is_main DESC, pi.sort_order ASC
+             LIMIT 1) AS image
+        FROM products p
+        WHERE p.id = ? LIMIT 1
+    ");
+    foreach ($guestCart as $gPid => $gQty) {
+        if ((int)$gQty <= 0) continue;
+        $stmtItems->execute([(int)$gPid]);
+        $row = $stmtItems->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $row['qty'] = (int)$gQty;
+            $cartItems[] = $row;
+        }
+    }
+}
 
 if (!$cartItems) {
     header('Location: /cart');
@@ -158,7 +194,7 @@ $__quickDiscount = 0;
 foreach ($cartItems as $__it) {
     $__qty = (int)$__it['qty'];
     if ($__qty <= 0) continue;
-    $__p = PricingService::calculate($db, (int)$__it['product_id'], $__qty, current_user_group());
+    $__p = PricingService::calculate($db, (int)$__it['product_id'], $__qty, $isCustomer ? current_user_group() : 'regular');
     if ($__p['base_price'] <= 0) continue;
     $__quickSubtotal += (int)$__p['base_line_total'];
     $__quickDiscount += (int)$__p['discount_amount'];
@@ -229,6 +265,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (!$error && $receiverMobile !== '' && !preg_match('/^09\d{9}$/', $receiverMobile)) {
         $error = 'موبایل گیرنده معتبر نیست.';
+    }
+
+    /* ═══ ⭐ مرحلهٔ آخر: مهمان باید همین‌جا وارد شود یا ثبت‌نام کند ═══
+       (سبد مهمان و آدرس انتخابی در session محفوظ است؛ با ورود، به‌صورت
+       خودکار با سبد حساب ادغام و تخفیف سطح عضویت اعمال می‌شود) */
+    if (!$error && !$isCustomer) {
+        $error = 'برای ثبت نهایی، ورود یا ثبت‌نام لازم است — سبد و آدرس شما ذخیره شده است.';
     }
 
     if (!$error) {
@@ -575,26 +618,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* ═══ ۷) اقلام برای نمایش ═══ */
-$userGroup = current_user_group();
-$stmt = $db->prepare("
-    SELECT
-        ci.qty,
-        p.id AS product_id,
-        p.code,
-        p.name,
-        p.slug,
-        p.base_price,
-        (SELECT image_path FROM product_images pi
-         WHERE pi.product_id = p.id
-         ORDER BY pi.is_main DESC, pi.sort_order ASC
-         LIMIT 1) AS image
-    FROM cart_items ci
-    JOIN carts c    ON c.id = ci.cart_id
-    JOIN products p ON p.id = ci.product_id
-    WHERE c.user_id = ? AND c.status = 'active'
-");
-$stmt->execute([$userId]);
-$items = $stmt->fetchAll();
+$userGroup = $isCustomer ? current_user_group() : 'regular';
+if ($isCustomer) {
+    $stmt = $db->prepare("
+        SELECT
+            ci.qty,
+            p.id AS product_id,
+            p.code,
+            p.name,
+            p.slug,
+            p.base_price,
+            (SELECT image_path FROM product_images pi
+             WHERE pi.product_id = p.id
+             ORDER BY pi.is_main DESC, pi.sort_order ASC
+             LIMIT 1) AS image
+        FROM cart_items ci
+        JOIN carts c    ON c.id = ci.cart_id
+        JOIN products p ON p.id = ci.product_id
+        WHERE c.user_id = ? AND c.status = 'active'
+    ");
+    $stmt->execute([$userId]);
+    $items = $stmt->fetchAll();
+} else {
+    $guestCart = (isset($_SESSION['guest_cart']) && is_array($_SESSION['guest_cart']))
+        ? $_SESSION['guest_cart'] : [];
+    $items = [];
+    $stmt = $db->prepare("
+        SELECT
+            p.id AS product_id,
+            p.code,
+            p.name,
+            p.slug,
+            p.base_price,
+            (SELECT image_path FROM product_images pi
+             WHERE pi.product_id = p.id
+             ORDER BY pi.is_main DESC, pi.sort_order ASC
+             LIMIT 1) AS image
+        FROM products p
+        WHERE p.id = ? LIMIT 1
+    ");
+    foreach ($guestCart as $gPid => $gQty) {
+        if ((int)$gQty <= 0) continue;
+        $stmt->execute([(int)$gPid]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $row['qty'] = (int)$gQty;
+            $items[] = $row;
+        }
+    }
+}
 
 if (!$items && !$error) {
     header('Location: /cart');
@@ -660,6 +732,7 @@ ob_start();
     <a href="/checkout-shipping">ارسال</a> ›
     <span>خلاصه</span>
 </nav>
+<script>try{sessionStorage.setItem('rabetiCheckout','1');}catch(e){}</script>
 
 <section class="catalog-head">
     <h1 class="catalog-title">خلاصه سفارش</h1>
@@ -763,6 +836,13 @@ ob_start();
                 </div>
             <?php endif; ?>
 
+            <?php if (!$isCustomer): ?>
+                <div class="cart-summary-row" style="color:#166534;">
+                    <span>تخفیف سطح عضویت</span>
+                    <b>بعد از ورود/ثبت‌نام اعمال می‌شود</b>
+                </div>
+            <?php endif; ?>
+
             <div class="cart-summary-row">
                 <span>هزینه ارسال</span>
                 <b>
@@ -779,6 +859,7 @@ ob_start();
                 <b><?= number_format($total) ?> تومان</b>
             </div>
 
+            <?php if ($isCustomer): ?>
             <div class="form-field" style="margin-top:14px;">
                 <label>گیرنده (اختیاری — خالی = خودتان)</label>
                 <input type="text" name="receiver_name" form="commitForm" value="<?= $h($_POST['receiver_name'] ?? '') ?>">
@@ -795,6 +876,23 @@ ob_start();
                     تأیید نهایی و پرداخت ←
                 </button>
             </form>
+            <?php else: ?>
+
+            <div class="pd-specs-box" style="margin-top:14px;border:1px dashed var(--line-strong,#c9a961);">
+                <div class="pd-price-title">مرحلهٔ آخر — ورود یا ثبت‌نام</div>
+                <p class="review-text">
+                    سبد و آدرس شما محفوظ است. با ورود یا ثبت‌نام در همین مرحله،
+                    سبد مهمان به‌صورت خودکار با سبد حساب شما ادغام می‌شود و
+                    تخفیف سطح عضویت روی سفارش اعمال می‌گردد.
+                </p>
+                <button type="button" class="btn btn-primary cart-checkout-btn" data-auth-open="login">
+                    ورود و ثبت نهایی سفارش ←
+                </button>
+                <button type="button" class="btn btn-outline" data-auth-open="register" style="margin-top:10px;width:100%;">
+                    ثبت‌نام سریع
+                </button>
+            </div>
+            <?php endif; ?>
 
         </div>
     </div>
@@ -802,4 +900,6 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
+// checkout.css: قوانین مشترک مراحل تسویه (checkout-) — فقط صفحات checkout
+$pageCss = ['/assets/css/checkout.css?v=1'];
 require ROOT_PATH . '/views/layouts/main.php';

@@ -18,8 +18,10 @@ require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/PricingService.php';
 
-if (!is_customer_logged_in()) {
-    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
+/* ⭐ خرید مهمان‌پسند: پیش‌فاکتور برای مهمان هم باز است (از سبد session) */
+$isCustomer = is_customer_logged_in();
+if (!$isCustomer && is_admin_logged_in()) {
+    header('Location: /admin');
     exit;
 }
 
@@ -67,58 +69,121 @@ $numFa = static function ($value, int $decimals = 0): string {
     ]);
 };
 
-/* گرفتن آیتم‌های سبد */
-$stmt = $db->prepare("SELECT id FROM carts WHERE user_id = ? AND status = 'active' LIMIT 1");
-$stmt->execute([$userId]);
-$cartId = (int)($stmt->fetchColumn() ?: 0);
+/* گرفتن آیتم‌های سبد (کاربر: DB — مهمان: session) */
+if ($isCustomer) {
+    $stmt = $db->prepare("SELECT id FROM carts WHERE user_id = ? AND status = 'active' LIMIT 1");
+    $stmt->execute([$userId]);
+    $cartId = (int)($stmt->fetchColumn() ?: 0);
 
-if (!$cartId) {
-    header('Location: /cart');
-    exit;
+    if (!$cartId) {
+        header('Location: /cart');
+        exit;
+    }
+    /* کنترل حداقل مجموع خرید محصولات جفتی */
+    $pairQty = PricingService::getPairQtyByCart($db, $cartId);
+
+    if (PricingService::violatesPairMinimum($pairQty)) {
+        header('Location: /cart');
+        exit;
+    }
+
+    /* ═══ آیتم‌های سبد + عکس + قیمت ═══ */
+    $stmt = $db->prepare("
+        SELECT
+            ci.id AS item_id,
+            ci.qty,
+            p.id AS product_id,
+            p.code,
+            p.name,
+            p.slug,
+            p.base_moq,
+            p.base_price,
+            GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock,
+            (
+                SELECT image_path FROM product_images pi
+                WHERE pi.product_id = p.id
+                ORDER BY pi.is_main DESC, pi.sort_order ASC
+                LIMIT 1
+            ) AS image
+        FROM cart_items ci
+        INNER JOIN products p ON p.id = ci.product_id
+        LEFT JOIN inventory inv ON inv.product_id = p.id
+        WHERE ci.cart_id = ?
+        ORDER BY ci.id ASC
+    ");
+    $stmt->execute([$cartId]);
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    /* اطلاعات مشتری */
+    $stmt = $db->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
+    $stmt->execute([$userId]);
+    $customer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $userGroup = current_user_group();
+} else {
+    $guestCart = (isset($_SESSION['guest_cart']) && is_array($_SESSION['guest_cart']))
+        ? $_SESSION['guest_cart'] : [];
+    $ids = array_map('intval', array_keys($guestCart));
+    if (!$ids) {
+        header('Location: /cart');
+        exit;
+    }
+
+    $ph = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $db->prepare("
+        SELECT
+            NULL AS item_id,
+            p.id AS product_id,
+            p.code,
+            p.name,
+            p.slug,
+            p.base_moq,
+            p.base_price,
+            GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock,
+            (
+                SELECT image_path FROM product_images pi
+                WHERE pi.product_id = p.id
+                ORDER BY pi.is_main DESC, pi.sort_order ASC
+                LIMIT 1
+            ) AS image
+        FROM products p
+        LEFT JOIN inventory inv ON inv.product_id = p.id
+        WHERE p.id IN ($ph)
+    ");
+    $stmt->execute($ids);
+    $items = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $qty = (int)($guestCart[(int)$row['product_id']] ?? 0);
+        if ($qty > 0) {
+            $row['qty'] = $qty;
+            $items[] = $row;
+        }
+    }
+    if (!$items) {
+        header('Location: /cart');
+        exit;
+    }
+
+    /* کنترل حداقل مجموع خرید محصولات جفتی */
+    $pairQty = 0;
+    foreach ($items as $it) {
+        $stmtU = $db->prepare("SELECT COALESCE((SELECT spec_value FROM product_specs
+            WHERE product_id = ? AND spec_key = 'واحد سفارش' LIMIT 1), 'جفتی')");
+        $stmtU->execute([(int)$it['product_id']]);
+        if ((string)$stmtU->fetchColumn() === 'جفتی') {
+            $pairQty += (int)$it['qty'];
+        }
+    }
+    if (PricingService::violatesPairMinimum($pairQty)) {
+        header('Location: /cart');
+        exit;
+    }
+
+    $customer = null;
+    $userGroup = 'regular';
 }
-/* کنترل حداقل مجموع خرید محصولات جفتی */
-/* ⭐ FIX: کنترل حداقل مجموع خرید محصولات جفتی — از منبع مشترک */
-$pairQty = PricingService::getPairQtyByCart($db, $cartId);
-
-if (PricingService::violatesPairMinimum($pairQty)) {
-    header('Location: /cart');
-    exit;
-}
-
-/* ═══ آیتم‌های سبد + عکس + قیمت ═══ */
-$stmt = $db->prepare("
-    SELECT
-        ci.id AS item_id,
-        ci.qty,
-        p.id AS product_id,
-        p.code,
-        p.name,
-        p.slug,
-        p.base_moq,
-        p.base_price,
-        GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock,
-        (
-            SELECT image_path FROM product_images pi
-            WHERE pi.product_id = p.id
-            ORDER BY pi.is_main DESC, pi.sort_order ASC
-            LIMIT 1
-        ) AS image
-    FROM cart_items ci
-    INNER JOIN products p ON p.id = ci.product_id
-    LEFT JOIN inventory inv ON inv.product_id = p.id
-    WHERE ci.cart_id = ?
-    ORDER BY ci.id ASC
-");
-$stmt->execute([$cartId]);
-$items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-/* اطلاعات مشتری */
-$stmt = $db->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
-$stmt->execute([$userId]);
-$customer = $stmt->fetch(PDO::FETCH_ASSOC);
 
 /* ═══ محاسبه با PricingService ═══ */
-$userGroup = current_user_group();
 $subtotal = 0;
 $totalQty = 0;
 $totalDiscount = 0;
@@ -422,8 +487,10 @@ $pageTitle = 'پیش‌فاکتور | رابطی';
         <div class="info-grid">
             <div class="info-box">
                 <b>مشتری:</b><br>
-                <?= $h($customer['full_name'] ?? '-') ?><br>
-                موبایل: <span dir="ltr"><?= $h($customer['mobile'] ?? '-') ?></span>
+                <?= $isCustomer
+                    ? $h($customer['full_name'] ?? '-')
+                    : 'مهمان (در مرحلهٔ آخر ثبت‌نام می‌شود)' ?><br>
+                موبایل: <span dir="ltr"><?= $isCustomer ? $h($customer['mobile'] ?? '-') : '—' ?></span>
             </div>
             <div class="info-box">
                 <b>تعداد کل اقلام:</b> <?= $numFa($totalQty) ?> عدد<br>

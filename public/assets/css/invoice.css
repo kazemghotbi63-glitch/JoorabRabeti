@@ -1,0 +1,346 @@
+/* ════════════════════════════════════════════════════════════════
+   invoice.css  —  تولیدشده توسط ابزار تفکیک CSS (از app.css)
+   سایت: joorabrabeti.ir
+   ════════════════════════════════════════════════════════════════ */
+
+/* ==========================================================================
+   Invoice Print Page (صفحه چاپ فاکتور)
+   ========================================================================== */
+.invoice-page {
+  width: min(900px, 100%);
+  background: #fff;
+  border: 1px solid #e6dcc9;
+  border-radius: 14px;
+  overflow: hidden;
+  max-width: 1100px;
+  margin: 30px auto 60px;
+}
+
+.invoice-meta {
+  min-width: 175px;
+  text-align: left;
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+/* Footer */
+.invoice-footer {
+  margin-top: 18px;
+  padding-top: 10px;
+  color: var(--muted);
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 15px 32px;
+  border-top: 1px solid var(--invoice-border);
+  background: #fafafa;
+}
+
+/* Mobile */
+/* Print */
+@media print {
+  .invoice-page {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+  .invoice-footer {
+    margin-top: 9px;
+  }
+  .invoice-page,
+  tr {
+    break-inside: avoid;
+  }
+}
+
+.invoice-meta div {
+  margin-bottom: 6px;
+}
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+.invoice-actions {
+  margin-bottom: 20px;
+  width: min(1120px, 100%);
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media print {
+  .invoice-actions,
+  .breadcrumb {
+    display: none !important;
+  }
+  .invoice-page {
+    margin: 0;
+    max-width: none;
+  }
+}
+
+.payment-invoice-number {
+  min-width: 180px;
+  padding: 13px 16px;
+  border: 1px solid #e7e7e7;
+  border-radius: 14px;
+  background: #fff;
+  text-align: center;
+}
+
+.payment-invoice-number span {
+  display: block;
+  color: #777;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.payment-invoice-number b {
+  font-size: 15px;
+}
+
+body.invoice-page {
+  margin: 0;
+  padding: 24px;
+  background: var(--invoice-bg);
+  color: var(--invoice-text);
+  font-family: Tahoma, Arial, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* ============================================================
+   MAIN SHEET
+   ============================================================ */
+.invoice-sheet {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  background: var(--invoice-card);
+  border: 1px solid var(--invoice-border);
+  border-radius: 20px;
+  box-shadow: var(--invoice-shadow);
+  overflow: hidden;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.invoice-header {
+  padding: 28px 32px 22px;
+  border-bottom: 1px solid var(--invoice-border);
+}
+
+.invoice-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.invoice-title {
+  text-align: left;
+}
+
+.invoice-title-label {
+  color: var(--invoice-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.invoice-title-number {
+  margin-top: 3px;
+  color: var(--invoice-dark);
+  font-size: 23px;
+  font-weight: 900;
+  direction: ltr;
+  unicode-bidi: embed;
+}
+
+/* ============================================================
+   CONTENT
+   ============================================================ */
+.invoice-content {
+  padding: 28px 32px 32px;
+}
+
+/* ============================================================
+   BOTTOM
+   ============================================================ */
+.invoice-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 22px;
+  margin-top: 28px;
+}
+
+/* ============================================================
+   ERROR PAGE
+   ============================================================ */
+.invoice-error-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+@media print {
+  html,
+  body.invoice-page {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+  body.invoice-page {
+    font-size: 10px;
+  }
+  .invoice-actions {
+    display: none !important;
+  }
+  .invoice-sheet {
+    width: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .invoice-header {
+    padding: 10px 0 12px;
+  }
+  .invoice-content {
+    padding: 14px 0 16px;
+  }
+  .invoice-footer {
+    padding: 10px 0;
+    background: #fff;
+  }
+  .invoice-bottom {
+    grid-template-columns: minmax(0, 1fr) 330px;
+    gap: 14px;
+  }
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+@media (max-width: 820px) {
+  body.invoice-page {
+    padding: 12px;
+  }
+  .invoice-header {
+    padding: 22px 18px 18px;
+  }
+  .invoice-content {
+    padding: 22px 18px 24px;
+  }
+  .invoice-footer {
+    padding: 14px 18px;
+  }
+  .invoice-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* موبایل */
+@media (max-width: 760px) {
+  /*  7*/
+  .invoice-page {
+    margin: 15px auto 35px;
+  }
+  .invoice-meta {
+    text-align: right;
+  }
+  .invoice-actions {
+    flex-direction: column;
+  }
+  .invoice-actions button,
+  .invoice-actions a {
+    width: 100%;
+  }
+  .payment-invoice-number {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 640px) {
+  .invoice-page {
+    border-radius: 11px;
+  }
+  .invoice-meta {
+    min-width: 0;
+    text-align: left;
+  }
+  .invoice-footer {
+    flex-direction: column;
+    gap: 3px;
+  }
+  body.invoice-page {
+    padding: 0;
+    background: #fff;
+  }
+  .invoice-actions {
+    margin: 0;
+    padding: 10px;
+    background: #faf6ee;
+    flex-wrap: wrap;
+  }
+  .invoice-sheet {
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .invoice-header-top {
+    align-items: flex-start;
+  }
+  .invoice-title-label {
+    font-size: 10px;
+  }
+  .invoice-title-number {
+    font-size: 15px;
+  }
+  .invoice-meta {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin-top: 17px;
+  }
+  .invoice-bottom {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .invoice-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* ───────── موبایل کوچک (≤ 480px) — طرح Premium B2B ───────── */
+@media (max-width: 480px) {
+  .invoice-actions {
+    gap: 6px;
+  }
+  .invoice-header {
+    padding: 18px 14px 15px;
+  }
+  .invoice-content {
+    padding: 18px 14px 20px;
+  }
+  .invoice-header-top {
+    gap: 10px;
+  }
+  .invoice-title-number {
+    font-size: 13px;
+  }
+}

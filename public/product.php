@@ -307,7 +307,7 @@ $pricingPayload = [
 
 ob_start();
 ?>
-<link rel="stylesheet" href="/assets/css/product-premium.css?v=2">
+<!-- CSS اختصاصی محصول (product-premium + product-detail) به‌جای وسط body، در <head> از طریق $pageCss لود می‌شود -->
 
 <!-- ═══ Breadcrumb ═══ -->
 <nav class="breadcrumb">
@@ -950,10 +950,8 @@ ob_start();
 
         /* ═══════════ POST سبد ═══════════ */
         function postCart(action, qty, onSuccess, button) {
-            if (window.RABETI_AUTH !== true) {
-                authRequired();
-                return;
-            }
+            /* ⭐ خرید مهمان‌پسند: مهمان هم اضافه می‌کند؛ ورود فقط در مرحلهٔ آخر.
+               ۴۰۱ به‌عنوان پشتیبان باقی است (پاسخ authRequired دارد). */
 
             var oldHtml = button ? button.innerHTML : '';
             if (button) {
@@ -1030,10 +1028,7 @@ ob_start();
         if (buyButton) {
             buyButton.addEventListener('click', function(event) {
                 event.preventDefault();
-                if (window.RABETI_AUTH !== true) {
-                    authRequired();
-                    return;
-                }
+                /* ⭐ خرید مهمان‌پسند: بدون الزام به ورود در ابتدای خرید */
 
                 var isInCart = (cartState && cartState.style.display !== 'none');
 
@@ -1158,4 +1153,6 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
+// product-premium.css: قوانین صفحه تک‌محصول (pd-*) + product-detail.css: بقایای pd- از app.css
+$pageCss = ['/assets/css/product-premium.css?v=2', '/assets/css/product-detail.css?v=1'];
 require ROOT_PATH . '/views/layouts/main.php';

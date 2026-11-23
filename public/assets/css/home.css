@@ -1,40 +1,435 @@
-/* ═══════════════════════════════════════════════════════
-   Rabati Home — Unified Theme v3
-   فیروزه‌ای → هدر، هیرو، سفارش اختصاصی، CTA، فوتر
-   آبی فولادی → دسته‌بندی
-   ═══════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════
+   home.css  —  تولیدشده توسط ابزار تفکیک CSS (از app.css)
+   سایت: joorabrabeti.ir
+   ════════════════════════════════════════════════════════════════ */
 
+/* متغیرهای فیروزه‌ای/نارنجی قدیمی (home-theme) که در ادغام جا مانده بودند —
+   بدون این تعریف، var(--rb-teal) نامعتبر می‌شود و پس‌زمینه‌ی CTA/هیرو
+   شفاف می‌ماند (شکست کنتراست متن سفید). مقادیر = پالت قهوه‌ای یکپارچه. */
 :root {
   --rb-teal: #6b4a2f;
   --rb-teal-d: #4a2c1a;
   --rb-teal-l: #f0e6d8;
   --rb-teal-xl: #faf6ee;
-
   --rb-steel: #6b4a2f;
   --rb-steel-d: #4a2c1a;
   --rb-steel-l: #f0e6d8;
-
   --rb-orange: #e58a24;
   --rb-orange-d: #c96f12;
   --rb-orange-l: #fff4e5;
-
   --rb-cream: #f7f7f3;
   --rb-white: #ffffff;
   --rb-ink: #3a2418;
-  --rb-mut: #8b7355;
+  --rb-mut: #6b4a2f;
   --rb-line: rgba(107, 74, 47, 0.1);
+}
 
-  --rb-shadow-sm: 0 4px 16px rgba(107, 74, 47, 0.07);
-  --rb-shadow-md: 0 12px 32px rgba(107, 74, 47, 0.11);
-  --rb-shadow-lg: 0 22px 55px rgba(107, 74, 47, 0.15);
+.hero-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 25px;
+}
 
-  --rb-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+/* V6 current product/storefront */
+.r6-hero {
+  border-radius: 24px;
+  min-height: 480px;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+  width: 100%;
+  height: 480px;
+  overflow: hidden;
+  background: linear-gradient(
+    140deg,
+    var(--rb-teal-xl) 0%,
+    var(--rb-teal-l) 100%
+  ) !important;
+  color: var(--text);
+  margin: 16px auto;
+  max-width: 100%;
+  box-shadow: 0 20px 45px rgba(27, 63, 80, 0.28),  
+    0 6px 14px rgba(27, 63, 80, 0.18),  
+      
+    inset 0 2px 2px rgba(255, 255, 255, 0.55),  
+      
+    inset 0 -3px 6px rgba(27, 63, 80, 0.25);
+  padding-top: 56px !important;
+  padding-bottom: 72px !important;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.r6-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.r6-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(74, 44, 26, 0.92),
+    rgba(74, 44, 26, 0.45),
+    transparent
+  );
+}
+
+.r6-hero h1 {
+  font-size: Clamp(2rem, 7vw, 3.2rem);
+}
+
+.r6-hero p {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.r6-hero .r-btn {
+  margin-top: 15px;
+}
+
+.r6-hero-picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.r6-hero-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+/* ------------------------------------------------------------
+   متن
+------------------------------------------------------------ */
+.r6-hero-content h1 {
+  letter-spacing: -0.5px;
+  margin: 0 0 10px;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  line-height: 1.4;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------
+   لایه اسلایدها
+------------------------------------------------------------ */
+.r6-hero-slides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ------------------------------------------------------------
+   هر اسلاید
+------------------------------------------------------------ */
+.r6-hero-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.65s ease,
+    visibility 0.65s ease;
+  pointer-events: none;
+}
+
+/* فقط اسلاید فعال */
+.r6-hero-slide.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------
+   لایه خوانایی متن
+------------------------------------------------------------ */
+.r6-hero-fade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  display: none;
+}
+
+/* ------------------------------------------------------------
+   محتوای روی بنر
+------------------------------------------------------------ */
+.r6-hero-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 26px 22px 32px;
+  box-sizing: border-box;
+}
+
+.r6-hero-content p {
+  margin: 0 0 20px;
+  max-width: 700px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 2;
+}
+
+/* ------------------------------------------------------------
+   دکمه‌ها
+------------------------------------------------------------ */
+.r6-hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.r6-hero-cta .r-btn {
+  min-width: 160px;
+}
+
+/* ------------------------------------------------------------
+   دکمه قبلی / بعدی
+------------------------------------------------------------ */
+.r6-hero-prev,
+.r6-hero-next {
+  position: absolute;
+  top: 50%;
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  background: rgba(74, 44, 26, 0.55);
+  color: #fff;
+  font-family: inherit;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.r6-hero-prev:hover,
+.r6-hero-next:hover {
+  background: rgba(74, 44, 26, 0.82);
+}
+
+.r6-hero-prev {
+  right: 20px;
+}
+
+.r6-hero-next {
+  left: 20px;
+}
+
+/* ------------------------------------------------------------
+   نقطه‌های اسلایدر
+------------------------------------------------------------ */
+.r6-hero-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 10;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.r6-hero-dot {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(74, 44, 26, 0.35);
+  cursor: pointer;
+  transition: width 0.25s ease,
+    background 0.25s ease;
+}
+
+.r6-hero-dot.is-active {
+  width: 24px;
+  border-radius: 10px;
+  background: var(--brand);
+}
+
+/* ------------------------------------------------------------
+   حالت بدون بنر
+------------------------------------------------------------ */
+.r6-hero-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px;
+}
+
+/* .rp-eyebrow {
+  font-size: medium;
+  color: #a25e2f; /* کنتراست ۴.۶۶ */
+*/
+
+.r6-ig-eyebrow {
+  color: #8f5313; /* هماهنگ با instagram-gallery.css — کنتراست ۵.۵۲:۱ */
+}
+
+.r6-ig-head-l p,
+.r6-custom-body p {
+  color: #6a563d; /* کنتراست ۶.۲۶:۱ روی کرم — رفع شکست مرزی AA */
+}
+
+.r6-ig-dot {
+  width: 24px;
+  height: 24px;
+}
+
+/* ─── بهینه‌سازی رندر (content-visibility) ───
+   بخش‌های پایینِ صفحه تا لحظه‌ی نزدیک شدن به viewport رندر نمی‌شوند.
+   اگر بعد از پیاده‌سازی «پرش» عجیبی در اسکرول دیدید، این بلوک را حذف کنید. */
+.r6-custom-section,
+.r6-ig {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+/* موبایل */
+@media (max-width: 760px) {
+  /*  1 */
+  .r6-hero {
+    min-height: 220px;
+  }
+  .r6-hero-content h1 {
+    font-size: clamp(1.7rem, 8vw, 2.2rem);
+  }
+  .r6-hero-cta .r-btn {
+    flex: 1;
+    min-width: 0;
+  }
+  /*  2 */
+  .r6-hero {
+    height: clamp(220px, 30svh, 280px);
+  }
+  .r6-hero-content {
+    padding: 18px 15px 22px;
+  }
+  .r6-hero-content h1 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+    margin-bottom: 6px;
+  }
+  .r6-hero-content p {
+    font-size: 0.78rem;
+    line-height: 1.8;
+    margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .r6-hero-cta {
+    gap: 7px;
+  }
+  .r6-hero-cta .r-btn {
+    min-width: 0;
+    flex: 1;
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+  .r6-hero-prev,
+  .r6-hero-next {
+    width: 34px;
+    height: 34px;
+    font-size: 23px;
+  }
+  .r6-hero-prev {
+    right: 9px;
+  }
+  .r6-hero-next {
+    left: 9px;
+  }
+  .r6-hero-dots {
+    bottom: 8px;
+  }
+}
+
+/* ───────── موبایل کوچک (≤ 480px) — طرح Premium B2B ───────── */
+@media (max-width: 480px) {
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .r6-hero {
+    height: clamp(200px, 30svh, 260px);
+  }
+  .r6-hero-content {
+    padding: 14px 12px 18px;
+  }
+  .r6-hero-content h1 {
+    font-size: 1.35rem;
+  }
+  .r6-hero-content p {
+    font-size: 0.73rem;
+  }
+  .r6-hero-cta .r-btn {
+    font-size: 11px;
+  }
+  .r6-hero-prev,
+  .r6-hero-next {
+    width: 30px;
+    height: 30px;
+    font-size: 20px;
+  }
+}
+
+/* براقیت شیشه‌ای روی سطح — حس برجستگی */
+.r6-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(  
+    to bottom,  
+    rgba(255, 255, 255, 0.22) 0%,  
+    rgba(255, 255, 255, 0.05) 18%,  
+    rgba(255, 255, 255, 0) 35%,  
+    rgba(0, 0, 0, 0.08) 100%  
+  );
+}
+
+/* موبایل */
+@media (max-width: 768px) {
+  .r6-hero {
+    border-radius: 16px;
+    margin: 10px;
+  }
 }
 
 /* ═══════════════════════════════════════════════
    یکسان‌سازی همه سکشن‌ها — پایه
    ═══════════════════════════════════════════════ */
-
 .r6-hero,
 .r-cats-premium,
 .r6-custom-section,
@@ -52,6 +447,12 @@
   padding-right: 5px !important;
   padding-top: 20px !important;
   padding-bottom: 20px !important;
+  padding: 20px 24px !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  position: relative;
 }
 
 /* محتوای درونی سکشن‌ها */
@@ -70,27 +471,13 @@
   box-sizing: border-box;
 }
 
-/* استثناها */
-.r6-hero {
-  padding-top: 56px !important;
-  padding-bottom: 72px !important;
-}
-
+/* ═══════════════════════════════════════════════
+   CTA نهایی — فیروزه‌ای تیره
+   ═══════════════════════════════════════════════ */
 .r6-final {
   padding-top: 80px !important;
   padding-bottom: 80px !important;
-}
-
-/* ═══════════════════════════════════════════════
-   HERO — فیروزه‌ای
-   ═══════════════════════════════════════════════ */
-
-.r6-hero {
-  background: linear-gradient(
-    140deg,
-    var(--rb-teal-xl) 0%,
-    var(--rb-teal-l) 100%
-  ) !important;
+  background: var(--brand-dark) !important;
 }
 
 .r6-eyebrow {
@@ -122,9 +509,8 @@
 /* ═══════════════════════════════════════════════
    بخش‌های عمومی
    ═══════════════════════════════════════════════ */
-
 .r-section {
-  background: #fff;
+  background: #ffffff !important;
 }
 
 .r-sec-head h2 {
@@ -148,7 +534,6 @@
 /* ═══════════════════════════════════════════════
    پرفروش‌ها — کارت‌های هم‌ارتفاع
    ═══════════════════════════════════════════════ */
-
 .r-section .r-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -156,10 +541,13 @@
   align-items: stretch;
 }
 
+/* ═══ END UNIFY ═══ */
+/* بج «در سبد» روی کارت‌های صفحه اصلی */
 .r6-card {
   display: flex;
   flex-direction: column;
   height: 100%;
+  position: relative;
 }
 
 .r6-card-body {
@@ -188,7 +576,6 @@
 /* ═══════════════════════════════════════════════
    تازه‌ها — کرم
    ═══════════════════════════════════════════════ */
-
 .r6-newwrap {
   background: var(--rb-cream) !important;
 }
@@ -209,7 +596,6 @@
 /* ═══════════════════════════════════════════════
    چرا رابطی — کرم گرم
    ═══════════════════════════════════════════════ */
-
 .r6-why-section {
   background: var(--rb-cream);
 }
@@ -236,8 +622,7 @@
   border-radius: 22px;
   padding: 32px 22px 28px;
   text-align: center;
-  transition:
-    transform 0.35s var(--rb-ease),
+  transition: transform 0.35s var(--rb-ease),
     box-shadow 0.35s ease,
     border-color 0.35s ease;
   position: relative;
@@ -293,7 +678,6 @@
 /* ═══════════════════════════════════════════════
    سفارش اختصاصی — فیروزه‌ای
    ═══════════════════════════════════════════════ */
-
 .r6-custom-section {
   background: linear-gradient(
     135deg,
@@ -393,8 +777,7 @@
   font-size: 0.88rem;
   font-weight: 700;
   box-shadow: 0 12px 28px rgba(107, 74, 47, 0.28);
-  transition:
-    background 0.25s ease,
+  transition: background 0.25s ease,
     transform 0.25s ease,
     box-shadow 0.25s ease;
 }
@@ -420,25 +803,6 @@
   object-fit: cover;
 }
 
-/* ═══════════════════════════════════════════════
-   CTA نهایی — فیروزه‌ای تیره
-   ═══════════════════════════════════════════════ */
-
-.r6-final {
-  background:
-    radial-gradient(
-      circle at 20% 30%,
-      rgba(229, 138, 36, 0.15),
-      transparent 45%
-    ),
-    radial-gradient(
-      circle at 80% 70%,
-      rgba(107, 74, 47, 0.35),
-      transparent 50%
-    ),
-    var(--rb-teal-d) !important;
-}
-
 .r6-eyebrow-light {
   color: var(--rb-orange) !important;
   letter-spacing: 0.5px;
@@ -461,7 +825,6 @@
 /* ═══════════════════════════════════════════════
    موبایل @ 768
    ═══════════════════════════════════════════════ */
-
 @media (max-width: 768px) {
   /* padding سکشن‌ها */
   .r6-hero,
@@ -477,29 +840,24 @@
     padding-top: 20px !important;
     padding-bottom: 20px !important;
   }
-
   .r6-hero {
     padding-top: 36px !important;
     padding-bottom: 52px !important;
   }
-
   .r6-final {
     padding-top: 56px !important;
     padding-bottom: 56px !important;
   }
-
   /* پرفروش‌ها */
   .r-section .r-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
-
   .r6-card-body h3 {
     min-height: 3.2em;
     -webkit-line-clamp: 3;
     font-size: 0.85rem;
   }
-
   /* ⭐ لینک «مشاهده همه» — پایین چپ */
   .r-sec-head {
     display: flex;
@@ -508,56 +866,46 @@
     gap: 14px;
     margin-bottom: 20px;
   }
-
   .r-sec-head > div {
     width: 100%;
   }
-
   .r-sec-head .r-sec-link {
-    align-self: flex-end; /* ← چپ در RTL */
+    align-self: flex-end;
     margin-top: 4px;
   }
-
   /* چرا رابطی */
   .r6-why {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-
   .r6-why-cell {
     padding: 22px 14px 20px;
     border-radius: 18px;
   }
-
   .r6-why-cell svg {
     width: 32px;
     height: 32px;
     padding: 9px;
   }
-
   .r6-why-cell b {
     font-size: 0.85rem;
   }
   .r6-why-cell span {
     font-size: 0.7rem;
   }
-
   /* سفارش اختصاصی */
   .r6-custom-inner {
     grid-template-columns: 1fr;
     gap: 24px;
     text-align: center;
   }
-
   .r6-custom-features {
     justify-content: center;
   }
-
   .r6-custom-visual {
     order: -1;
     max-width: 100%;
   }
-
   .r6-custom-inner h3 {
     font-size: 1.2rem;
   }
@@ -566,7 +914,6 @@
 /* ═══════════════════════════════════════════════
    موبایل @ 1024 (تبلت)
    ═══════════════════════════════════════════════ */
-
 @media (max-width: 1024px) {
   .r6-why {
     grid-template-columns: repeat(2, 1fr);
@@ -576,7 +923,6 @@
 /* ═══════════════════════════════════════════════
    موبایل @ 400 (خیلی کوچک)
    ═══════════════════════════════════════════════ */
-
 @media (max-width: 400px) {
   .r6-hero,
   .r-cats-premium,
@@ -590,8 +936,8 @@
     padding-right: 3px !important;
   }
 }
-/* ═══════════════ تازه‌ها — بج شماره مینیمال ═══════════════ */
 
+/* ═══════════════ تازه‌ها — بج شماره مینیمال ═══════════════ */
 .r6-card-new {
   position: relative;
 }
@@ -619,8 +965,7 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   border: 1px solid rgba(255, 255, 255, 0.6);
-  transition:
-    background 0.25s ease,
+  transition: background 0.25s ease,
     color 0.25s ease,
     transform 0.25s ease;
 }
@@ -642,29 +987,6 @@
   }
 }
 
-/* ═══════════════════════════════════════════════════════
-   🎯 UNIFY HOMEPAGE SECTIONS — اضافه شده برای رفع «دو تیکه»
-   ═══════════════════════════════════════════════════════ */
-
-/* ─── همه سکشن‌ها: padding یکسان، بدون سایه، بدون border ─── */
-.r6-hero,
-.r-cats-premium,
-.r6-custom-section,
-.r-section,
-.r6-newwrap,
-.r6-why-section,
-.r6-ig,
-.r6-final {
-  padding: 20px 24px !important;
-  margin: 0 !important;
-  box-shadow: none !important;
-  border-top: none !important;
-  border-bottom: none !important;
-  position: relative;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
 /* ─── پس‌زمینه یکسان برای همه (کرم روشن) ─── */
 .r6-hero,
 .r-cats-premium,
@@ -673,18 +995,6 @@
 .r6-why-section,
 .r6-ig {
   background: var(--brand-xlight) !important;
-}
-
-/* ─── بخش محصولات: سفید (برای تفکیک طبیعی) ─── */
-.r-section {
-  background: #ffffff !important;
-}
-
-/* ─── CTA نهایی: قهوه‌ای تیره ─── */
-.r6-final {
-  background: var(--brand-dark) !important;
-  padding-top: 80px !important;
-  padding-bottom: 80px !important;
 }
 
 /* ─── حذف همه سایه‌های تزئینی که «دو تیکه» ایجاد می‌کنند ─── */
@@ -718,12 +1028,6 @@
   margin-top: 0 !important;
 }
 
-/* ─── Hero: کمی کم‌تر در بالا ─── */
-.r6-hero {
-  padding-top: 56px !important;
-  padding-bottom: 72px !important;
-}
-
 /* ─── Footer: بدون سایه بالایی ─── */
 .r6-footer-box {
   box-shadow: none !important;
@@ -745,12 +1049,10 @@
   .r6-final {
     padding: 20px 16px !important;
   }
-
   .r6-hero {
     padding-top: 36px !important;
     padding-bottom: 52px !important;
   }
-
   .r6-final {
     padding-top: 56px !important;
     padding-bottom: 56px !important;
@@ -769,99 +1071,6 @@
     padding-left: 5px !important;
     padding-right: 5px !important;
   }
-}
-
-/* ═══ END UNIFY ═══ */
-
-/* ═══════════════════════════════════════════════════════
-   🎯 UNIFY HOMEPAGE SECTIONS — اضافه شده برای رفع «دو تیکه»
-   ═══════════════════════════════════════════════════════ */
-
-/* ─── همه سکشن‌ها: padding یکسان، بدون سایه، بدون border ─── */
-.r6-hero,
-.r-cats-premium,
-.r6-custom-section,
-.r-section,
-.r6-newwrap,
-.r6-why-section,
-.r6-ig,
-.r6-final {
-  padding: 20px 24px !important;
-  margin: 0 !important;
-  box-shadow: none !important;
-  border-top: none !important;
-  border-bottom: none !important;
-  position: relative;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-/* ─── پس‌زمینه یکسان برای همه (کرم روشن) ─── */
-.r6-hero,
-.r-cats-premium,
-.r6-custom-section,
-.r6-newwrap,
-.r6-why-section,
-.r6-ig {
-  background: var(--brand-xlight) !important;
-}
-
-/* ─── بخش محصولات: سفید (برای تفکیک طبیعی) ─── */
-.r-section {
-  background: #ffffff !important;
-}
-
-/* ─── CTA نهایی: قهوه‌ای تیره ─── */
-.r6-final {
-  background: var(--brand-dark) !important;
-  padding-top: 80px !important;
-  padding-bottom: 80px !important;
-}
-
-/* ─── حذف همه سایه‌های تزئینی که «دو تیکه» ایجاد می‌کنند ─── */
-.r6-hero::before,
-.r6-hero::after,
-.r-cats-premium::before,
-.r-cats-premium::after,
-.r6-custom-section::before,
-.r6-custom-section::after,
-.r6-newwrap::before,
-.r6-newwrap::after,
-.r6-why-section::before,
-.r6-why-section::after,
-.r6-ig::before,
-.r6-ig::after,
-.r6-final::before,
-.r6-final::after {
-  display: none !important;
-  content: none !important;
-  background: none !important;
-}
-
-/* ─── حذف margin بین سکشن‌ها ─── */
-.r6-hero + .r-cats-premium,
-.r-cats-premium + .r6-custom-section,
-.r6-custom-section + .r-section,
-.r-section + .r6-newwrap,
-.r6-newwrap + .r6-why-section,
-.r6-why-section + .r6-ig,
-.r6-ig + .r6-final {
-  margin-top: 0 !important;
-}
-
-/* ─── Hero: کمی کم‌تر در بالا ─── */
-.r6-hero {
-  padding-top: 56px !important;
-  padding-bottom: 72px !important;
-}
-
-/* ─── Footer: بدون سایه بالایی ─── */
-.r6-footer-box {
-  box-shadow: none !important;
-}
-
-.r6-footer-box::before {
-  display: none !important;
 }
 
 /* ─── موبایل ─── */
@@ -876,12 +1085,10 @@
   .r6-final {
     padding: 20px 16px !important;
   }
-
   .r6-hero {
     padding-top: 36px !important;
     padding-bottom: 52px !important;
   }
-
   .r6-final {
     padding-top: 56px !important;
     padding-bottom: 56px !important;
@@ -901,22 +1108,11 @@
     padding-right: 5px !important;
   }
 }
-/* هیرو همیشه full-width */
-.r6-hero {
-  width: 100%;
-  max-width: 100%;
-  margin-left: 0;
-  margin-right: 0;
-}
 
-/* ═══ END UNIFY ═══ */
-/* بج «در سبد» روی کارت‌های صفحه اصلی */
-.r6-card {
-  position: relative;
-}
 .r6-card .in-cart-badge {
   display: none;
 }
+
 .r6-card.is-in-cart .in-cart-badge {
   display: inline-flex;
   align-items: center;
@@ -933,10 +1129,12 @@
   z-index: 3;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
+
 .r6-card.is-in-cart .in-cart-badge svg {
   width: 12px;
   height: 12px;
 }
+
 .r6-card .r6-card-img {
   position: relative;
 }
@@ -984,6 +1182,7 @@
   margin: 0;
   line-height: 1.8;
 }
+
 /* ── سرتیر دسته‌بندی ── */
 .rp-cats-head {
   text-align: right;

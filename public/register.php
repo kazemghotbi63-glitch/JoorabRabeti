@@ -133,7 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>ثبت‌نام | رابطی</title>
 
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/app.css?v=22">
+    <!-- core.css جایگزین app.css شد (تفکیک CSS — فقط قوانین سراسری لازم برای صفحه ثبت‌نام) -->
+    <link rel="stylesheet" href="/assets/css/core.css?v=20001">
 
     <style>
         body.register-page {

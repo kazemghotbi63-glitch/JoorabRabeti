@@ -28,7 +28,7 @@ if (PHP_SAPI !== 'cli') { exit("فقط از خط فرمان اجرا شود.\n")
 $opts = getopt('', ['dry-run', 'no-db', 'max::', 'quality::', 'sm::']);
 $DRY_RUN = isset($opts['dry-run']);
 $SKIP_DB = isset($opts['no-db']);
-$MAX_W   = (int)($opts['max'] ?? 1000);      // حداکثر ضلع بزرگ تصویر اصلی
+$MAX_W   = (int)($opts['max'] ?? 1600);     // حداکثر ضلع بزرگ تصویر اصلی (۱۶۰۰ = سقف thumb.php، مناسب hero/صفحات بزرگ)
 $SM_W    = (int)($opts['sm'] ?? 400);        // عرض نسخه کوچک برای کارت‌ها
 $QUALITY = (int)($opts['quality'] ?? 80);
 
@@ -179,10 +179,7 @@ foreach ($rii as $file) {
                     } catch (Throwable $e) { /* ستون/جدول ندارد — رد شو */ }
                 }
             }
-            try {
-                $st = db()->prepare("UPDATE settings SET value = ? WHERE name = ? AND value = ?");
-                $st->execute([$newDb, 'x', $oldDb]); // الگو؛ پایین به‌صورت داینامیک اجرا می‌شود
-            } catch (Throwable $e) {}
+            // نکته: آپدیت جدول settings در پایان حلقه (خطوط پایین) به‌صورت داینامیک و صحیح انجام می‌شود.
         }
     } else {
         $stats['bytes_after'] += $oldSize;

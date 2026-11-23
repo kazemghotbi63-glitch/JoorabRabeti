@@ -257,7 +257,7 @@ $pageTitle = 'سفارش تولید اختصاصی | جوراب رابطی';
 ob_start();
 ?>
 
-<link rel="stylesheet" href="/assets/css/custom-order.css?v=1005">
+<!-- custom-order.css از وسط body به <head> منتقل شد (از طریق $pageCss قبل از require main.php) -->
 
 <section class="page-head">
     <h1 class="section-title">تولید جوراب با برند شما</h1>
@@ -461,4 +461,6 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
+// custom-order.css: قوانین فرم سفارش سفارشی — فقط صفحه custom-order
+$pageCss = ['/assets/css/custom-order.css?v=1005'];
 require ROOT_PATH . '/views/layouts/main.php';

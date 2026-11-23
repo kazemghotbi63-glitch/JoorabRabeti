@@ -46,6 +46,10 @@ if ($isLoggedIn) {
     } catch (Throwable $e) {
         error_log('cart count: ' . $e->getMessage());
     }
+} else {
+    /* ⭐ خرید مهمان‌پسند: بج سبد برای مهمان از سبد session */
+    $cartCount = (isset($_SESSION['guest_cart']) && is_array($_SESSION['guest_cart']))
+        ? (int)array_sum($_SESSION['guest_cart']) : 0;
 }
 ?>
 <!DOCTYPE html>
@@ -56,23 +60,29 @@ if ($isLoggedIn) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
 
-    <!-- ═══ SEO ═══ -->
-    <title>جوراب رابطی | تولیدکننده و فروش عمده جوراب</title>
+    <!-- ═══ SEO — title/description داینامیک از هر صفحه ($pageTitle/$pageDescription) ═══ -->
+    <title><?= htmlspecialchars($pageTitle ?? 'جوراب رابطی | تولیدکننده و فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?></title>
 
-    <meta name="description" content="جوراب رابطی، تولیدکننده و عرضه‌کننده انواع جوراب مردانه، زنانه و بچگانه. خرید عمده جوراب با قیمت تولیدی، تخفیف پلکانی و سفارش مستقیم از کارخانه." />
+    <meta name="description" content="<?= htmlspecialchars($pageDescription ?? 'جوراب رابطی، تولیدکننده و عرضه‌کننده انواع جوراب مردانه، زنانه و بچگانه. خرید عمده جوراب با قیمت تولیدی، تخفیف پلکانی و سفارش مستقیم از کارخانه.', ENT_QUOTES, 'UTF-8') ?>" />
+<?php if (!empty($metaRobots)): ?>
+    <meta name="robots" content="<?= htmlspecialchars($metaRobots, ENT_QUOTES, 'UTF-8') ?>">
+<?php endif; ?>
     <meta name="author" content="RABETI">
-    <meta name="theme-color" content="#004f53">
-    <link rel="canonical" href="https://joorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
+    <meta name="theme-color" content="#4a2c1a">
+<?php
+    $__canonical = $canonicalPath ?? (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+?>
+    <link rel="canonical" href="<?= htmlspecialchars($siteUrl . $__canonical, ENT_QUOTES, 'UTF-8') ?>">
 
     <!-- ═══ Open Graph ═══ -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="رابطی">
-    <meta property="og:title" content="جوراب رابطی | تولیدکننده و فروش عمده جوراب" />
-    <meta property="og:description" content="تولید و عرضه انواع جوراب مردانه، زنانه و بچگانه با تخفیف پلکانی و سفارش مستقیم از کارخانه." />
+    <meta property="og:title" content="<?= htmlspecialchars($pageTitle ?? 'جوراب رابطی | تولیدکننده و فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>" />
+    <meta property="og:description" content="<?= htmlspecialchars($pageDescription ?? 'تولید و عرضه انواع جوراب مردانه، زنانه و بچگانه با تخفیف پلکانی و سفارش مستقیم از کارخانه.', ENT_QUOTES, 'UTF-8') ?>" />
     <meta property="og:locale" content="fa_IR">
-    <meta property="og:url" content="https://joorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:url" content="<?= htmlspecialchars($siteUrl . $__canonical, ENT_QUOTES, 'UTF-8') ?>">
 
-    <meta property="og:image" content="<?= htmlspecialchars($siteUrl . $ogDefaultImage, ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:image" content="<?= htmlspecialchars($siteUrl . ($ogImage ?? $ogDefaultImage), ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:image:width" content="512">
     <meta property="og:image:height" content="512">
     <meta property="og:image:alt" content="<?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>">
@@ -82,28 +92,81 @@ if ($isLoggedIn) {
     <meta name="twitter:image:alt" content="<?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>">
 
     <!-- ═══ Favicon & Icons ═══ -->
+    <!-- ⭐ FIX: سه لینک favicon تکراری با یک URL → مرورگر لوگوی ۷۰KB را دو بار می‌گرفت.
+         فقط یک rel="icon" (توصیه: یک favicon-32.png سبک هم جدا بسازید) -->
     <link rel="icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>">
-    <link rel="shortcut icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>">
-    <link rel="apple-touch-icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>">
-    <link rel="mask-icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>" color="#004f53">
+    <link rel="mask-icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>" color="#4a2c1a">
 
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=10015">
-
-    <?php
-    // لود CSS اختصاصی صفحه تماس و درباره ما (فقط در همین دو صفحه)
-    $__currentPage = basename($_SERVER['PHP_SELF'] ?? '');
-    if (in_array($__currentPage, ['contact.php', 'about.php'], true)): ?>
-        <link rel="stylesheet" href="/assets/css/contact-about.css?v=2">
+    <!-- ⭐ FIX فونت: preload وزیرمتن — با @font-face جدید در core.css، فونت واقعی سایت
+         جای Tahoma فالبک می‌نشیند و متن بدون پرش (FOUT نرم با font-display: swap) -->
+    <link rel="preload" as="font" type="font/woff2"
+        href="/fonts/Vazirmatn-Regular.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2"
+        href="/fonts/Vazirmatn-Bold.woff2" crossorigin>
+    <?php if (strpos($_SERVER['REQUEST_URI'] ?? '', '/') === 0): ?>
+    <!-- ⭐ [Lighthouse] وزن ۵۰۰ در زنجیره رندر اولیه است؛ preload زنجیره فونت را قطع می‌کند -->
+    <link rel="preload" as="font" type="font/woff2"
+        href="/fonts/Vazirmatn-Medium.woff2" crossorigin>
     <?php endif; ?>
 
-    <?php foreach (($pageCss ?? []) as $pc): ?>
-        <link rel="stylesheet" href="<?= htmlspecialchars($pc, ENT_QUOTES, 'UTF-8') ?>">
+    <?php
+
+    $coreCssVersion = '20004';   /* bump: @font-face + یکپارچه‌سازی رنگ‌ها */
+    ?>
+    <link rel="stylesheet" href="/assets/css/core.min.css?v=1003<?= $coreCssVersion ?>">
+
+    <?php
+    $__currentPage = basename($_SERVER['PHP_SELF'] ?? '');
+    if (in_array($__currentPage, ['contact.php', 'about.php'], true)): ?>
+        <link rel="stylesheet" href="/assets/css/contact-about.css?v=1002">
+    <?php endif; ?>
+
+    <?php
+ 
+    /* ⭐ سئو: چاپ JSON-LD صفحه ($jsonLd) — تا کنون Organization/Product/Breadcrumb
+       ساخته می‌شد ولی هیچ‌وقت در head رندر نمی‌شد */
+    foreach (($jsonLd ?? []) as $__ld):
+        $__ldJson = json_encode($__ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_LINE_TERMINATORS);   /* بدون UNESCAPED_SLASHES تا «/» ها escape شوند و </script> تزریق نشود */
+        if ($__ldJson !== false):
+    ?>
+    <script type="application/ld+json"><?= $__ldJson ?></script>
+    <?php endif; endforeach; ?>
+
+    <?php
+    foreach (($pageCss ?? []) as $pc): ?>
+        <link rel="preload" as="style" href="<?= htmlspecialchars($pc, ENT_QUOTES, 'UTF-8') ?>" onload="this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="<?= htmlspecialchars($pc, ENT_QUOTES, 'UTF-8') ?>"></noscript>
     <?php endforeach; ?>
+
+    <?php
+  
+    if (!empty($heroBanners) && is_array($heroBanners) && !empty($heroBanners[0]['image_path'])
+        && function_exists('rabeti_thumb')) {
+        $hb0 = $heroBanners[0];
+        // موبایل (تنها در صفحات باریک preload می‌شود)
+        if (!empty($hb0['mobile_image_path'])) {
+            $mSrc = rabeti_thumb($hb0['mobile_image_path'], 760, 507);
+            if ($mSrc !== '' && $mSrc !== $hb0['mobile_image_path']) {
+                printf('<link rel="preload" as="image" fetchpriority="high" media="(max-width: 760px)" href="%s">' . "\n",
+                    htmlspecialchars($mSrc, ENT_QUOTES, 'UTF-8'));
+            }
+        }
+        // دسکتاپ (پیش‌فرض — LCP در صفحات پهن)
+        $dSrc = rabeti_thumb($hb0['image_path'], 1440, 960);
+        if ($dSrc !== '' && $dSrc !== $hb0['image_path']) {
+            printf('<link rel="preload" as="image" fetchpriority="high" href="%s">' . "\n",
+                htmlspecialchars($dSrc, ENT_QUOTES, 'UTF-8'));
+        }
+    }
+    ?>
 
 </head>
 
 <body class="app-body">
+
+    <!-- ⭐ a11y: پرش سریع به محتوا با کیبورد -->
+    <a class="skip-link" href="#main">پرش به محتوا</a>
 
     <!-- ══════════ نوار اعلان ══════════ -->
 
@@ -167,7 +230,7 @@ if ($isLoggedIn) {
                         <?php
                         // ⭐ دریافت اطلاعات گروه مشتری برای نمایش در هدر
                         $headerUserGroupCode = strtolower((string)current_user_group());
-                        $headerGroupColor = '#8b7355';
+                        $headerGroupColor = '#7d6446';   /* [Lighthouse] کنتراست ۵.۵۵ */
 
                         if (class_exists('PricingService')) {
                             $groupData = PricingService::getGroup(db(), current_user_group());
@@ -205,7 +268,8 @@ if ($isLoggedIn) {
 
     <aside class="drawer r6-drawer" id="drawer"
         aria-label="منوی اصلی"
-        aria-hidden="true">
+        aria-hidden="true"
+        inert>
 
         <!-- هدر منو: مشترک بین مدیر، مشتری و مهمان -->
         <div class="drawer-user-box">
@@ -412,7 +476,7 @@ if ($isLoggedIn) {
 
     <!-- ══════════ محتوا ══════════ -->
 
-    <main class="container page-shell">
+    <main class="container page-shell" id="main" tabindex="-1">
         <?= $content ?? '' ?>
     </main>
 
@@ -482,7 +546,7 @@ if ($isLoggedIn) {
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 20v-4h2v4M15 20v-4h2v4" />
                                     </svg>
                                 </span>
-                                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a;">کارخانه</h4>
+                                <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a;">کارخانه</h3>
                             </div>
                             <p style="margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: #555;">
                                 بازار حاج قاسم، کوچه علیرضا زمان، پلاک ۱۸
@@ -500,7 +564,7 @@ if ($isLoggedIn) {
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" />
                                     </svg>
                                 </span>
-                                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a;">دفتر فروش</h4>
+                                <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a;">دفتر فروش</h3>
                             </div>
                             <p style="margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: #555;">
                                 بازار حاج قاسم، کوچه چراغ برق، کوچه حلم‌زاده، پلاک ۱۶، واحد ۱
@@ -513,18 +577,18 @@ if ($isLoggedIn) {
                         <!-- فروشگاه -->
                         <div style="background: #fff; border-radius: 14px; padding: 16px 18px; border: 1px solid #eee; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
                             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                                <span style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #fff3e0, #ffe0b2); color: #e65100; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <span style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #fff3e0, #ffe0b2); color: #b83a00; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 22V12h6v10" />
                                     </svg>
                                 </span>
-                                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a;">فروشگاه</h4>
+                                <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #1a1a1a;">فروشگاه</h3>
                             </div>
                             <p style="margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: #555;">
                                 بازار بزرگ تهران — بازار عباس‌آباد، سرای لطفی‌پور، پلاک ۲۲
                             </p>
-                            <a href="tel:09197693149" style="font-size: 13.5px; color: #e65100; text-decoration: none; font-weight: 600; direction: ltr; display: inline-block;">
+                            <a href="tel:09197693149" style="font-size: 13.5px; color: #9e3300; text-decoration: none; font-weight: 600; direction: ltr; display: inline-block;">
                                 ۰۹۱۹-۷۶۹-۳۱۴۹
                             </a>
                         </div>
@@ -692,7 +756,7 @@ if ($isLoggedIn) {
 
                 <!-- مرحله ۲: ورود شماره/ایمیل -->
                 <div id="forgot-step-2" style="display:none;">
-                    <button type="button" class="auth-back" id="forgotBack1">→</button>
+                    <button type="button" class="auth-back" id="forgotBack1" aria-label="مرحله قبل">→</button>
                     <h3 class="auth-pane-title" id="forgotTargetTitle">ارسال کد بازیابی</h3>
 
                     <div class="form-field">
@@ -707,7 +771,7 @@ if ($isLoggedIn) {
 
                 <!-- مرحله ۳: کد + رمز جدید -->
                 <div id="forgot-step-3" style="display:none;">
-                    <button type="button" class="auth-back" id="forgotBack2">→</button>
+                    <button type="button" class="auth-back" id="forgotBack2" aria-label="مرحله قبل">→</button>
                     <h3 class="auth-pane-title">ثبت کد و رمز جدید</h3>
 
                     <div class="form-error" id="forgotError2" style="display:none;"></div>
@@ -837,59 +901,9 @@ if ($isLoggedIn) {
         </a>
     </div>
 
-    <script>
-        /* ⭐ FIX: باز شدن کانال‌های ارتباطی در همه صفحات (از جمله صفحه اصلی) */
-        (function() {
-            const toggle = document.getElementById('socialToggle');
-            const popup = document.getElementById('socialPopup');
-
-            if (!toggle || !popup) return;
-
-            function openPopup() {
-                popup.classList.add('is-open');
-                popup.setAttribute('aria-hidden', 'false');
-                popup.removeAttribute('inert');
-                toggle.setAttribute('aria-expanded', 'true');
-            }
-
-            function closePopup() {
-                popup.classList.remove('is-open');
-                popup.setAttribute('aria-hidden', 'true');
-                popup.setAttribute('inert', '');
-                toggle.setAttribute('aria-expanded', 'false');
-            }
-
-            toggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-
-                if (popup.classList.contains('is-open')) {
-                    closePopup();
-                } else {
-                    openPopup();
-                }
-            });
-
-            popup.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-
-            document.addEventListener('click', function(e) {
-                if (
-                    !toggle.contains(e.target) &&
-                    !popup.contains(e.target)
-                ) {
-                    closePopup();
-                }
-            });
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    closePopup();
-                }
-            });
-        })();
-    </script>
+    <!-- ⭐ [Keys audit] کنترلر تکراری پاپ‌آپ شبکه‌های اجتماعی حذف شد؛
+         مالک یکتای این کلید اکنون app.js (بخش ۱۲) است — قبلاً دو IIFE روی همان
+         toggle listener ثبت می‌کردند (دو مدیریت‌گر کلیک/Escape/outside-click). -->
 
     <script src="/assets/js/jalali.js" defer></script>
 
@@ -897,7 +911,36 @@ if ($isLoggedIn) {
         window.RABETI_AUTH = <?= $isLoggedIn ? 'true' : 'false' ?>;
     </script>
 
-    <script src="/assets/js/app.js?v=1008" defer></script>
+    <script src="/assets/js/app.js?v=1010" defer></script>
+
+    <!-- ═══ [Lighthouse a11y] هم‌گام‌سازی inert با aria-hidden ═══ -->
+    <script>
+    (function () {
+        // هر عنصری که با aria-hidden="true" پنهان می‌شود (کشو، لایت‌باکس، پاپ‌آپ)
+        // باید inert=true هم بشود تا فرزندان قابل‌focus با کیبورد در دسترس نباشند.
+        // این اسکریپت به تغییرات aria-hidden گوش می‌دهد و inert را هم‌زمان نگه می‌دارد
+        // (وابسته‌ی JS خارجی نیست؛ خودکار کار می‌کند).
+        function syncInert(el) {
+            if (!el) return;
+            if (el.getAttribute('aria-hidden') === 'true') {
+                el.setAttribute('inert', '');
+            } else {
+                el.removeAttribute('inert');
+            }
+        }
+        var ids = ['drawer', 'r6IgLightbox', 'socialPopup', 'authModalOverlay'];
+        ids.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            syncInert(el);
+            if (window.MutationObserver) {
+                new MutationObserver(function () { syncInert(el); })
+                    .observe(el, { attributes: true, attributeFilter: ['aria-hidden'] });
+            }
+        });
+    })();
+    </script>
+
     <!-- ═══ Toast ═══ -->
     <div id="toast" class="toast"></div>
 

@@ -16,8 +16,11 @@ require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/PricingService.php';
 
-if (!is_customer_logged_in()) {
-    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
+/* ⭐ خرید مهمان‌پسند: سبد برای مهمان هم باز است (سبد مهمان در session نگه داشته می‌شود و
+   در مرحلهٔ آخر — ثبت سفارش — ورود/ثبت‌نام انجام می‌شود؛ بعد از ورود سبد ادغام می‌شود) */
+$isCustomer = is_customer_logged_in();
+if (!$isCustomer && is_admin_logged_in()) {
+    header('Location: /admin');
     exit;
 }
 
@@ -26,7 +29,7 @@ $h = static function ($v) {
 };
 $userId = (int)($_SESSION['customer_id'] ?? 0);
 $db = db();
-$userGroup = current_user_group();
+$userGroup = $isCustomer ? current_user_group() : 'regular';
 
 /* ═══════════════════════════════════════════════════════════
  * توابع کمکی فارسی
@@ -118,6 +121,107 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
         && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+    /* ═══ ⭐ حالت مهمان: item_id همان product_id است و سبد در session است ═══ */
+    if (!$isCustomer) {
+        $guestCart = (isset($_SESSION['guest_cart']) && is_array($_SESSION['guest_cart']))
+            ? $_SESSION['guest_cart'] : [];
+
+        $failG = static function (int $code, string $msg) use ($isAjax) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code($code);
+                echo json_encode(['ok' => false, 'error' => $msg], JSON_UNESCAPED_UNICODE);
+            } else {
+                header('Location: /cart');
+            }
+            exit;
+        };
+
+        if ($itemId <= 0 || !isset($guestCart[$itemId])) {
+            $failG(404, 'آیتم سبد پیدا نشد.');
+        }
+
+        $stmt = $db->prepare("
+            SELECT p.id, p.base_moq, p.is_active,
+                (SELECT spec_value FROM product_specs
+                 WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code,
+                GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock
+            FROM products p
+            LEFT JOIN inventory inv ON inv.product_id = p.id
+            WHERE p.id = ? LIMIT 1
+        ");
+        $stmt->execute([$itemId]);
+        $pRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$pRow) {
+            $failG(404, 'محصول یافت نشد.');
+        }
+
+        $unitLabelG = unit_label($pRow['unit_code'] ?? 'جفتی');
+
+        /* ─── حذف ─── */
+        if ($do === 'remove' || ($do === 'update' && (int)($_POST['qty'] ?? 0) <= 0)) {
+            unset($guestCart[$itemId]);
+            $_SESSION['guest_cart'] = $guestCart;
+
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => true, 'removed' => true], JSON_UNESCAPED_UNICODE);
+            } else {
+                header('Location: /cart');
+            }
+            exit;
+        }
+
+        /* ─── تغییر تعداد ─── */
+        if ($do === 'update') {
+            $qty = (int)($_POST['qty'] ?? 0);
+            $validation = validateCartQty($qty, max(1, (int)$pRow['base_moq']), max(0, (int)$pRow['stock']), $unitLabelG);
+
+            if (!$validation['ok']) {
+                if ($isAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    http_response_code(422);
+                    echo json_encode([
+                        'ok'    => false,
+                        'error' => $validation['error'],
+                        'min'   => (int)$pRow['base_moq'],
+                        'max'   => (int)$pRow['stock'],
+                    ], JSON_UNESCAPED_UNICODE);
+                } else {
+                    header('Location: /cart');
+                }
+                exit;
+            }
+
+            if (!(int)$pRow['is_active']) {
+                $failG(422, 'این محصول دیگر فعال نیست.');
+            }
+
+            $guestCart[$itemId] = $qty;
+            $_SESSION['guest_cart'] = $guestCart;
+
+            if ($isAjax) {
+                $pricing = PricingService::calculate($db, $itemId, $qty, 'regular');
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'ok'               => true,
+                    'qty'              => $qty,
+                    'count'            => (int)array_sum($guestCart),
+                    'unit_price'       => $pricing['unit_price'],
+                    'discount_percent' => $pricing['discount_percent'],
+                    'discount_source'  => $pricing['discount_source'],
+                    'line_total'       => $pricing['line_total'],
+                    'customer_message' => $pricing['customer_message'],
+                ], JSON_UNESCAPED_UNICODE);
+            } else {
+                header('Location: /cart');
+            }
+            exit;
+        }
+
+        $failG(400, 'درخواست نامعتبر است.');
+    }
 
     if ($itemId <= 0) {
         if ($isAjax) {
@@ -274,35 +378,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  * اقلام سبد — با unit_code
  * ═══════════════════════════════════════════════════════════ */
 
-$stmt = $db->prepare("
-    SELECT
-        ci.id,
-        ci.qty,
-        p.id AS product_id,
-        p.code,
-        p.name,
-        p.slug,
-        p.base_moq,
-        p.base_price,
-        p.is_active,
-        (SELECT spec_value FROM product_specs
-         WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code,
-        GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock,
-        (
-            SELECT image_path FROM product_images pi
-            WHERE pi.product_id = p.id
-            ORDER BY pi.is_main DESC, pi.sort_order ASC
-            LIMIT 1
-        ) AS img
-    FROM cart_items ci
-    JOIN carts c ON c.id = ci.cart_id
-    JOIN products p ON p.id = ci.product_id
-    LEFT JOIN inventory inv ON inv.product_id = p.id
-    WHERE c.user_id = ? AND c.status = 'active'
-    ORDER BY ci.added_at DESC
-");
-$stmt->execute([$userId]);
-$items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if ($isCustomer) {
+    $stmt = $db->prepare("
+        SELECT
+            ci.id,
+            ci.qty,
+            p.id AS product_id,
+            p.code,
+            p.name,
+            p.slug,
+            p.base_moq,
+            p.base_price,
+            p.is_active,
+            (SELECT spec_value FROM product_specs
+             WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code,
+            GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock,
+            (
+                SELECT image_path FROM product_images pi
+                WHERE pi.product_id = p.id
+                ORDER BY pi.is_main DESC, pi.sort_order ASC
+                LIMIT 1
+            ) AS img
+        FROM cart_items ci
+        JOIN carts c ON c.id = ci.cart_id
+        JOIN products p ON p.id = ci.product_id
+        LEFT JOIN inventory inv ON inv.product_id = p.id
+        WHERE c.user_id = ? AND c.status = 'active'
+        ORDER BY ci.added_at DESC
+    ");
+    $stmt->execute([$userId]);
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    /* ⭐ رندر سبد مهمان از session (همان ساختار ردیف‌ها) */
+    $guestCart = (isset($_SESSION['guest_cart']) && is_array($_SESSION['guest_cart']))
+        ? $_SESSION['guest_cart'] : [];
+    $items = [];
+    $ids = array_map('intval', array_keys($guestCart));
+    if ($ids) {
+        $ph = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("
+            SELECT
+                p.id AS id,
+                p.id AS product_id,
+                p.code,
+                p.name,
+                p.slug,
+                p.base_moq,
+                p.base_price,
+                p.is_active,
+                (SELECT spec_value FROM product_specs
+                 WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code,
+                GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock,
+                (
+                    SELECT image_path FROM product_images pi
+                    WHERE pi.product_id = p.id
+                    ORDER BY pi.is_main DESC, pi.sort_order ASC
+                    LIMIT 1
+                ) AS img
+            FROM products p
+            LEFT JOIN inventory inv ON inv.product_id = p.id
+            WHERE p.id IN ($ph)
+        ");
+        $stmt->execute($ids);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $qty = (int)($guestCart[(int)$row['product_id']] ?? 0);
+            if ($qty > 0) {
+                $row['qty'] = $qty;
+                $items[] = $row;
+            }
+        }
+        /* مثل رفتار DB (جدیدترین اول) ترتیب session معکوس می‌شود */
+        $items = array_reverse($items);
+    }
+}
 
 /* ═══════════════════════════════════════════════════════════
  * محاسبه قیمت + شمارش بر اساس واحد
@@ -393,13 +541,14 @@ foreach ($items as &$it) {
 }
 unset($it);
 
-/* ⭐ FIX: محاسبه مجموع جفتی از منبع مشترک */
-$pairQty = PricingService::getPairQtyByUser($db, $userId);
-/* حداقل خرید تجمیعی محصولات جفتی */
-/* ⭐ FIX: حداقل خرید تجمیعی محصولات جفتی — از منبع مشترک */
-$cartMinimumIssue = null;
-
-/* ⭐ FIX: حداقل خرید تجمیعی محصولات جفتی — پیام شفاف و مشتری‌پسند */
+/* ⭐ FIX: حداقل خرید تجمیعی محصولات جفتی — همان قاعدهٔ PricingService،
+   مستقیم روی اقلام رندر (برای مهمان و کاربر یکسان) */
+$pairQty = 0;
+foreach ($items as $pIt) {
+    if ((string)($pIt['unit_code'] ?? 'جفتی') === 'جفتی') {
+        $pairQty += (int)$pIt['qty'];
+    }
+}
 $cartMinimumIssue = null;
 if (PricingService::violatesPairMinimum($pairQty)) {
     $minPairs = PricingService::CART_MIN_PAIR_QTY;
@@ -782,4 +931,6 @@ endif; ?>
 
 <?php
 $content = ob_get_clean();
+// cart.css: فقط قوانین سبد خرید (cart-list/cart-item/cart-summary/...) — استخراج‌شده از app.css
+$pageCss = ['/assets/css/cart.css?v=1'];
 require ROOT_PATH . '/views/layouts/main.php';

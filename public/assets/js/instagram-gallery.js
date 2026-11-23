@@ -184,6 +184,18 @@
     }, 150);
   });
 
-  renderDots();
-  updateUI();
+  /* ⭐ [Lighthouse] اجرای اولیه (getComputedStyle/offsetWidth در getPageCount =
+     forced reflow در مسیر بحرانی) به idle موکول شد */
+  var igInitDone = false;
+  function igInit() {
+    if (igInitDone) return;
+    igInitDone = true;
+    renderDots();
+    updateUI();
+  }
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(igInit, { timeout: 1500 });
+  } else {
+    setTimeout(igInit, 200);
+  }
 })();

@@ -120,7 +120,7 @@ $pageTitle = 'ارتباط با رابطی | تماس با ما';
 ob_start();
 ?>
 
-<link rel="stylesheet" href="/assets/css/contact-about.css">
+<!-- contact-about.css قبلاً توسط main.php (شرطی روی contact.php/about.php) در <head> لود می‌شود؛ این لینک بدنه حذف شد تا تکراری نباشد -->
 
 <div class="rbt-page-wrapper rbt-contact-page" dir="rtl">
 

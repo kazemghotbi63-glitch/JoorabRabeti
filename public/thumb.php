@@ -106,7 +106,7 @@ function r6_orig_path(string $f, string $uploadRoot, string $siteRoot): ?string
         }
         $roots = [realpath($uploadRoot), realpath($siteRoot)];
         foreach ($roots as $root) {
-            if ($root !== false && strpos($p, $root) === 0) {
+            if ($root !== false && ($p === $root || strpos($p, $root . DIRECTORY_SEPARATOR) === 0)) {
                 return $p;
             }
         }
@@ -215,16 +215,26 @@ if ($srcPath === null) {
 }
 
 $ext = strtolower(pathinfo($srcPath, PATHINFO_EXTENSION));
+/* ⭐ FIX امنیتی (High): قبلاً برای پسوند غیرتصویری (مثلاً .htaccess، .php، .log)
+   فایل خام emit می‌شد و هر کاربر ناشناس می‌توانست محتوای هر فایل زیر ریشه‌ی
+   سایت را بخواند (bypass قواعد FilesMatch در htaccess).
+   حالا فقط تصاویر مجاز سرو می‌شوند؛ بقیه → 404.
+   (rabeti_thumb_url در index.php هم فقط برای پسوند تصویری URL می‌سازد،
+   پس هیچ استفاده‌ی مشروعی از این مسیر از بین نمی‌رود.) */
 if (!in_array($ext, $ALLOWED_EXT, true)) {
-    r6_emit_file($srcPath);   /* پسوند عجیب؟ همان اصلی بده، سایت نشکند */
+    r6_log('blocked-non-image-ext', $f . ' [' . $ext . ']');
+    r6_not_found($f);
 }
 
 $dim = @getimagesize($srcPath);
 $srcMime = (is_array($dim) && !empty($dim['mime'])) ? $dim['mime'] : null;
 
-/* اگر تصویر اصلی کوچک‌تر از w است، بزرگ‌نمایی بی‌معناست → همان اصلی */
-if ($dim && $dim[0] <= $w) {
-    r6_emit_file($srcPath, $srcMime);
+/* اگر تصویر اصلی کوچک‌تر از w است، بزرگ‌نمایی بی‌معناست → اما فقط وقتی
+   منبع از قبل webp باشد و برش (h) نخواهیم. در غیر این صورت (مثلاً PNG هیرو
+   ۱۳۶۶px درخواست‌شده با w=1440) باید به webp تبدیل شود تا حجم ۶۸۴KB به
+   ~۱۵۰KB برسد و نسبت تصویر با برش مرکزی درست بماند. */
+if ($dim && $h === 0 && $dim[0] <= $w && $ext === 'webp') {
+    r6_emit_file($srcPath, 'image/webp', 'public, max-age=31536000, immutable');
 }
 
 /* ───────── کش ───────── */

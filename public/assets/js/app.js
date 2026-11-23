@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   RABETI — app.js (نسخه تمیز v5 - 2026-10-23)
+   RABETI — app.js (v6 — فیکس منوی کشویی + بهینه‌سازی TBT — 2026-11-23)
    ═══════════════════════════════════════════════════════════
    • تمام متغیرها یکتا (بدون تداخل)
    • ساختار IIFE برای جلوگیری از آلودگی global scope
@@ -62,25 +62,55 @@
   var appMenuBtn = document.getElementById("menuBtn");
   var appCloseBtn = document.getElementById("closeBtn");
 
+  /* ⭐ FIX (باگ کلیک منو): کشو در HTML با aria-hidden="true" و inert رندر می‌شود.
+     اگر هنگام باز کردن این دو آپدیت نشوند، کل زیردرخت منو «inert» می‌ماند و
+     مرورگر همه‌ی کلیک‌ها/فوکوس‌های داخل منو را نادیده می‌گیرد — یعنی کاربر
+     روی «محصولات» یا هر لینک دیگری می‌زند و اتفاقی نمی‌افتد.
+     حالا باز/بسته کردن منو aria-hidden و inert را هم‌زمان همگام می‌کند
+     (هماهنگ با اسکریپت syncInert در layout) و aria-expanded دکمه همبرگر
+     هم برای اسکرین‌ریدر به‌روز می‌شود. */
   function openDrawer() {
-    if (appDrawer) appDrawer.classList.add("open");
+    if (appDrawer) {
+      appDrawer.classList.add("open");
+      appDrawer.setAttribute("aria-hidden", "false");
+      appDrawer.removeAttribute("inert");
+    }
     if (appOverlay) appOverlay.classList.add("show");
     document.body.style.overflow = "hidden";
     document.body.classList.add("drawer-open");
+    if (appMenuBtn) appMenuBtn.setAttribute("aria-expanded", "true");
+    /* فوکوس اولین لینک منو — ناوبری کیبورد درست شروع شود */
+    var firstLink = appDrawer && appDrawer.querySelector(".r6-drawer-link, #closeBtn");
+    if (firstLink) {
+      try { firstLink.focus({ preventScroll: true }); } catch (e) { firstLink.focus(); }
+    }
   }
   function closeDrawer() {
-    if (appDrawer) appDrawer.classList.remove("open");
+    if (appDrawer) {
+      appDrawer.classList.remove("open");
+      appDrawer.setAttribute("aria-hidden", "true");
+      appDrawer.setAttribute("inert", "");
+    }
     if (appOverlay) appOverlay.classList.remove("show");
     document.body.style.overflow = "";
     document.body.classList.remove("drawer-open");
+    if (appMenuBtn) appMenuBtn.setAttribute("aria-expanded", "false");
   }
 
-  if (appMenuBtn) appMenuBtn.addEventListener("click", openDrawer);
+  if (appMenuBtn) {
+    appMenuBtn.setAttribute("aria-controls", "drawer");
+    appMenuBtn.setAttribute("aria-expanded", "false");
+    appMenuBtn.addEventListener("click", openDrawer);
+  }
   if (appCloseBtn) appCloseBtn.addEventListener("click", closeDrawer);
   if (appOverlay) appOverlay.addEventListener("click", closeDrawer);
 
   document.querySelectorAll(".r6-drawer-link").forEach(function (l) {
-    l.addEventListener("click", closeDrawer);
+    l.addEventListener("click", function () {
+      closeDrawer();
+      /* ⭐ نکته: اینجا closeDrawer کشو را inert می‌کند، اما چون لینک همچنان
+         پیش‌فرض مرورگر (ناوبری به href) را اجرا می‌کند، رفتار کلیک سالم است. */
+    });
   });
 
   document.addEventListener("keydown", function (e) {
@@ -488,7 +518,15 @@
           return;
         }
         window.closeAuthModal();
-        window.location.href = "/?registered=1";
+        /* ⭐ خرید مهمان‌پسند: بعد از ثبت‌نام، اگر کاربر وسط فرآیند خرید بود
+           به همان مرحلهٔ آخر برمی‌گردد (سرور ورود خودکار هم انجام می‌دهد) */
+        var r6RegisterDest = "/?registered=1";
+        try {
+          if (sessionStorage.getItem("rabetiCheckout") === "1") {
+            r6RegisterDest = "/checkout-review";
+          }
+        } catch (e) {}
+        window.location.href = r6RegisterDest;
       } catch (errObj) {
         console.error("REGISTER_ERROR:", errObj);
         showFormError(err, "ارتباط با سرویس ثبت‌نام برقرار نشد.");
@@ -754,8 +792,25 @@
       }
     });
   }
-  r6SweepBrokenImages();
-  window.addEventListener("load", r6SweepBrokenImages);
+  /* ⭐ Performance: اسکن اولیه بلافاصله در زمان eval اسکریپت اجرا نمی‌شود؛
+     خواندن naturalWidth روی همه‌ی تصاویر در آن لحظه forced-reflow تولید می‌کرد
+     (سهم بزرگ Style & Layout در Trace). به idle موکول شد + یک‌بار بعد از load. */
+  var sweepScheduled = false;
+  function sweepWhenIdle() {
+    if (sweepScheduled) return;
+    sweepScheduled = true;
+    var run = function () {
+      sweepScheduled = false;
+      r6SweepBrokenImages();
+    };
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(run, { timeout: 2000 });
+    } else {
+      setTimeout(run, 300);
+    }
+  }
+  sweepWhenIdle();
+  window.addEventListener("load", sweepWhenIdle);
 
   /* ══════════ ۱۴. Export برای استفاده در جاهای دیگر ══════════ */
   window.rabetiFaToEn = faToEn;

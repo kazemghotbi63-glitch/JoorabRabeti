@@ -73,47 +73,78 @@ $slotFa = static function (string $range): string {
     return 'از ' . $fa($sh) . ' ' . $tod($sh) . ' تا ' . $fa($eh) . ' ' . $tod($eh);
 };
 
-/* ═══ احراز هویت ═══ */
-if (!is_logged_in()) {
-    header('Location: /');
+/* ═══ احراز هویت — ⭐ خرید مهمان‌پسند ═══ */
+$isCustomer = is_customer_logged_in();
+if (!$isCustomer && is_admin_logged_in()) {
+    header('Location: /admin');
     exit;
 }
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
-$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
-if ($userId <= 0) {
-    header('Location: /');
-    exit;
-}
+$userId = $isCustomer ? (int)($_SESSION['customer_id'] ?? 0) : 0;
 
 $db = db();
 
-/* ═══ ۱) آدرس ═══ */
+/* ═══ ۱) آدرس (کاربر: DB — مهمان: session) ═══ */
 $addressId = (int)($_SESSION['checkout_address_id'] ?? 0);
-$address   = AddressService::get($userId, $addressId);
+if ($isCustomer) {
+    $address = AddressService::get($userId, $addressId);
+} else {
+    $address = (isset($_SESSION['checkout_guest_address'])
+                && is_array($_SESSION['checkout_guest_address']))
+        ? $_SESSION['checkout_guest_address'] : null;
+}
 if (!$address) {
     header('Location: /checkout-address');
     exit;
 }
 
 /* ═══ ۲) کوئری سبد ═══ */
-$userGroup = current_user_group();
-$stmt = $db->prepare("
-    SELECT
-        ci.product_id,
-        ci.qty,
-        p.base_price AS base_price,
-        (SELECT spec_value FROM product_specs
-         WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code
-    FROM cart_items ci
-    JOIN carts c     ON c.id = ci.cart_id
-    JOIN products p  ON p.id = ci.product_id
-    WHERE c.user_id = ? AND c.status = 'active'
-    ORDER BY ci.id ASC
-");
-$stmt->execute([$userId]);
-$cartItems = $stmt->fetchAll();
+$userGroup = $isCustomer ? current_user_group() : 'regular';
+if ($isCustomer) {
+    $stmt = $db->prepare("
+        SELECT
+            ci.product_id,
+            ci.qty,
+            p.base_price AS base_price,
+            (SELECT spec_value FROM product_specs
+             WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code
+        FROM cart_items ci
+        JOIN carts c     ON c.id = ci.cart_id
+        JOIN products p  ON p.id = ci.product_id
+        WHERE c.user_id = ? AND c.status = 'active'
+        ORDER BY ci.id ASC
+    ");
+    $stmt->execute([$userId]);
+    $cartItems = $stmt->fetchAll();
+} else {
+    $guestCart = (isset($_SESSION['guest_cart']) && is_array($_SESSION['guest_cart']))
+        ? $_SESSION['guest_cart'] : [];
+    $cartItems = [];
+    $stmt = $db->prepare("
+        SELECT
+            p.id AS product_id,
+            p.base_price AS base_price,
+            (SELECT spec_value FROM product_specs
+             WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code
+        FROM products p
+        WHERE p.id = ? LIMIT 1
+    ");
+    foreach ($guestCart as $gPid => $gQty) {
+        if ((int)$gQty <= 0) continue;
+        $stmt->execute([(int)$gPid]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $row['qty'] = (int)$gQty;
+            $cartItems[] = $row;
+        }
+    }
+}
+if (!$cartItems) {
+    header('Location: /cart');
+    exit;
+}
 
 /* ═══ ۳) محاسبه مبالغ سبد ═══ */
 $subtotal = 0;
@@ -234,6 +265,7 @@ ob_start();
     <a href="/checkout-address">آدرس</a> ›
     <span>ارسال</span>
 </nav>
+<script>try{sessionStorage.setItem('rabetiCheckout','1');}catch(e){}</script>
 
 <section class="catalog-head">
     <h1 class="catalog-title">روش و زمان ارسال</h1>
@@ -278,8 +310,8 @@ ob_start();
                     name="method"
                     value="<?= $h($mKey) ?>"
                     data-fee="<?= (int)$m['fee'] ?>"
-                    data-has-days="<?= $hasDays ? '1' : '0' ?>">
-                required>
+                    data-has-days="<?= $hasDays ? '1' : '0' ?>"
+                    required>
 
                 <span class="pay-method-body">
                     <b>
@@ -441,4 +473,6 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
+// checkout.css: قوانین مشترک مراحل تسویه (checkout-) — فقط صفحات checkout
+$pageCss = ['/assets/css/checkout.css?v=1'];
 require ROOT_PATH . '/views/layouts/main.php';

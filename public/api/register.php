@@ -30,8 +30,8 @@ if (!$__found) {
     http_response_code(500);
     echo json_encode([
         'ok' => false, 
-        'error' => 'فایل bootstrap.php پیدا نشد. لطفاً مسیر پوشه config را بررسی کنید.',
-        'debug_paths' => $__bp // برای دیباگ (بعداً حذف کنید)
+        'error' => 'فایل bootstrap.php پیدا نشد. لطفاً مسیر پوشه config را بررسی کنید.'
+        /* ⭐ FIX امنیتی: debug_paths (مسیرهای سرور) از پاسخ ناشناس حذف شد */
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -161,8 +161,17 @@ try {
         json_response($result, 409);
     }
 
+    /* ⭐ خرید مهمان‌پسند: ورود خودکار بعد از ثبت‌نام — تا کاربر
+       در ادامهٔ همان سبد و با تخفیف سطح خودش به مرحلهٔ آخر برسد */
+    $autoLogin = attempt_customer_login($mobile, $password);
+    if ($autoLogin['ok']) {
+        rabeti_merge_guest_cart(db());
+        rabeti_promote_guest_address(db(), (int)$_SESSION['customer_id']);
+    }
+
     json_response([
         'ok'       => true,
+        'logged_in' => $autoLogin['ok'] ? true : false,
         'role'     => 'customer',
         'name'     => $result['name'] ?? $fullName,
         'id'       => $result['id']   ?? null,

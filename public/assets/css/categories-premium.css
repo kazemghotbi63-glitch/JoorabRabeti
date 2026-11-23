@@ -46,7 +46,7 @@
   display: inline-block;
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--rp-orange);
+  color: #8f4a1f; /* کنتراست ۵.۹۵:۱ روی سفید/کرم — رفع شکست AA */
   letter-spacing: 0.5px;
   margin-bottom: 8px;
   position: relative;
@@ -236,6 +236,11 @@
   box-shadow: var(--rp-shadow-md);
   border: 2px solid rgba(107, 74, 47, 0.18);
   animation: rpPanelIn 0.4s ease;
+}
+
+/* ری‌استارت انیمیشن بدون forced reflow (جایگزین void offsetWidth در JS) */
+.rp-panel-wrap.rp-noanim {
+  animation: none !important;
 }
 
 @keyframes rpPanelIn {

@@ -1,8 +1,7 @@
 <?php
 /* ════ RABETI-FIX | نسخه: v5 | 2026-10-22 | جدیدترین نسخه (LATEST) ════ */
 
-/* Auto-detect bootstrap (local + host) */
-define('RABETI_THUMB_OFF', true);   // ⭐ عکس‌ها مستقیم لود می‌شن، thumb.php دور زده می‌شه
+define('RABETI_THUMB_OFF', false);
 $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
@@ -268,10 +267,9 @@ if (!function_exists('rabeti_thumb_url')) {
     }
 }
 
-/* ⭐ CSSهای اختصاصی صفحه در <head> لود می‌شوند (به‌جای وسط body → رندر-بلاک) */
 $pageCss = [
-    '/assets/css/categories-premium.css?v=9',
-    '/assets/css/home-theme.css',
+    '/assets/css/categories-premium.css?v=1004',
+    '/assets/css/home.css?v=1004',
 ];
 
 $jsonLd = [
@@ -369,7 +367,9 @@ ob_start();
                                 src="<?= $h(rabeti_thumb($banner['image_path'], 1440, 960)) ?>"
                                 srcset="<?= $h(rabeti_srcset($banner['image_path'], 1440, 960)) ?>"
                                 alt="<?= $h($banner['title'] ?? 'بنر رابطی') ?>"
-                                <?= $index === 0 ? 'fetchpriority="high"' : 'loading="lazy"' ?>>
+                                width="1440" height="960"
+                                decoding="async"
+                                fetchpriority="high">
 
                         </picture>
 
@@ -381,12 +381,12 @@ ob_start();
 
                     <div class="r6-hero-content">
 
-                        <h1>
+                        <?= $index === 0 ? '<h1>' : '<h2>' ?>
                             <?= $h(
                                 $banner['title']
                                     ?? 'تولیدکننده و فروش عمده جوراب رابطی'
                             ) ?>
-                        </h1>
+                        <?= $index === 0 ? '</h1>' : '</h2>' ?>
 
                         <p>
                             <?= $h(
@@ -500,7 +500,6 @@ ob_start();
 
 
 <!-- ═══ ۲. دسته‌بندی پریمیوم ═══ -->
-<!-- ⭐ CSS این بخش با $pageCss به <head> منتقل شد (حذف رندر-بلاک از بدنه صفحه) -->
 
 
 <section class="r-cats-premium">
@@ -509,8 +508,8 @@ ob_start();
 
         <div class="rp-head">
             <span class="rp-eyebrow">انتخاب مطمئن برای تمام سلیقه‌ها</span>
-            <h1 class="rp-title">کارخانه جوراب رابطی</h1>
-            <h2 class="rp-subtitle">مستقیم، بدون واسطه</h2>
+            <h2 class="rp-title">کارخانه جوراب رابطی</h2>
+            <p class="rp-subtitle">مستقیم، بدون واسطه</p>
         </div>
         <div class="rp-cats-head">
             <h2 class="rp-cats-title">دسته‌بندی جوراب عمده</h2>
@@ -537,7 +536,7 @@ ob_start();
 
                     <div class="rp-parent-img">
                         <?php if ($hasImage): ?>
-                            <img src="<?= $h(rabeti_thumb($parent['image_path'], 240, 240)) ?>" srcset="<?= $h(rabeti_srcset($parent['image_path'], 240, 240)) ?>" alt="<?= $h($parent['name']) ?>" loading="lazy">
+                            <img src="<?= $h(rabeti_thumb($parent['image_path'], 240, 240)) ?>" srcset="<?= $h(rabeti_srcset($parent['image_path'], 240, 240)) ?>" alt="<?= $h($parent['name']) ?>" width="240" height="240" loading="lazy" decoding="async">
                         <?php else: ?>
                             <div class="rp-fallback"></div>
                         <?php endif; ?>
@@ -602,7 +601,7 @@ ob_start();
 
                                     <div class="rp-sub-img">
                                         <?php if ($childHasImage): ?>
-                                            <img src="<?= $h(rabeti_thumb($child['image_path'], 240, 240)) ?>" srcset="<?= $h(rabeti_srcset($child['image_path'], 240, 240)) ?>" alt="<?= $h($child['name']) ?>" loading="lazy">
+                                            <img src="<?= $h(rabeti_thumb($child['image_path'], 240, 240)) ?>" srcset="<?= $h(rabeti_srcset($child['image_path'], 240, 240)) ?>" alt="<?= $h($child['name']) ?>" width="240" height="240" loading="lazy" decoding="async">
                                         <?php endif; ?>
                                     </div>
 
@@ -634,7 +633,7 @@ ob_start();
 
 </section>
 
-<script src="/assets/js/categories-premium.js" defer></script>
+<!-- categories-premium.js + instagram-gallery.js → با idle-loader در انتهای صفحه بارگذاری می‌شوند -->
 
 <!-- ═══ ۲.۵ سفارش اختصاصی ═══ -->
 
@@ -713,7 +712,7 @@ ob_start();
             <?php
             $customOrderImage = Setting::get('custom_order_image', '/Image/1.webp');
             ?>
-            <img src="<?= $h(rabeti_thumb($customOrderImage, 680, 680)) ?>" srcset="<?= $h(rabeti_srcset($customOrderImage, 680, 680)) ?>" alt="سفارش اختصاصی رابطی" loading="lazy">
+            <img src="<?= $h(rabeti_thumb($customOrderImage, 680, 680)) ?>" srcset="<?= $h(rabeti_srcset($customOrderImage, 680, 680)) ?>" alt="سفارش اختصاصی رابطی" width="680" height="680" loading="lazy" decoding="async">
         </div>
 
     </div>
@@ -753,7 +752,7 @@ ob_start();
                 <!-- ─── عکس محصول ─── -->
                 <a href="/product/<?= $h($p['slug']) ?>" class="prod-img" aria-label="<?= $h($p['name']) ?>">
                     <?php if (!empty($p['img'])): ?>
-                        <img src="<?= $h($p['img']) ?>" alt="<?= $h($p['name']) ?>" loading="lazy">
+                        <img src="<?= $h(rabeti_thumb($p['img'], 400, 0)) ?>" srcset="<?= $h(rabeti_srcset($p['img'], 400, 0)) ?>" alt="<?= $h($p['name']) ?>" width="400" height="225" loading="lazy" decoding="async">
                     <?php else: ?>
                         <span aria-hidden="true">🧦</span>
                     <?php endif; ?>
@@ -796,14 +795,14 @@ ob_start();
                                     <?= $numFa($discountPercent, 0) ?>٪ تخفیف سطح <?= $h($userGroupName) ?>
                                 </div>
                             <?php else: ?>
-                                <span class="prod-price-now" data-price-final style="font-size:1.15rem;font-weight:900;color:#004f53;">
+                                <span class="prod-price-now" data-price-final style="font-size:1.15rem;font-weight:900;color:#4a2c1a;">
                                     <?= $moneyFa($finalUnitPrice) ?>
                                 </span>
-                                <small class="prod-price-base" style="display:block;margin-top:4px;font-size:0.7rem;color:#8b7355;">تخفیف پلکانی </small>
+                                <small class="prod-price-base" style="display:block;margin-top:4px;font-size:0.7rem;color:#7d6446;">تخفیف پلکانی </small>
                             <?php endif; ?>
                         <?php else: ?>
-                            <span class="prod-price-now" style="font-size:1.05rem;font-weight:800;color:#b8860b;">استعلام قیمت</span>
-                            <small style="display:block;margin-top:4px;font-size:0.7rem;color:#8b7355;">برای قیمت تماس بگیرید</small>
+                            <span class="prod-price-now" style="font-size:1.05rem;font-weight:800;color:#936b08;">استعلام قیمت</span>
+                            <small style="display:block;margin-top:4px;font-size:0.7rem;color:#7d6446;">برای قیمت تماس بگیرید</small>
                         <?php endif; ?>
                     </div>
 
@@ -830,7 +829,7 @@ ob_start();
                             </button>
 
                             <div class="product-cart-indicator" data-product-id="<?= (int)$p['id'] ?>" style="display:none;position:relative;background:#faf6ee;width:38px;height:38px;border-radius:8px;border:1px solid #ebe3d5;align-items:center;justify-content:center;flex-shrink:0;" aria-label="در سبد خرید">
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#004f53" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#6b4a2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <circle cx="9" cy="20" r="1.5" />
                                     <circle cx="18" cy="20" r="1.5" />
                                     <path d="M3 3h2l2.4 12.4A2 2 0 009.4 17H18a2 2 0 002-1.6L21.5 8H7" />
@@ -839,7 +838,7 @@ ob_start();
                             </div>
                         </div>
                     <?php elseif ($stock > 0 && !$priceAvailable): ?>
-                        <div class="field-hint" style="margin-top:8px;color:#b8860b;">برای این محصول با ما تماس بگیرید.</div>
+                        <div class="field-hint" style="margin-top:8px;color:#936b08;">برای این محصول با ما تماس بگیرید.</div>
                     <?php elseif ($stock === 0): ?>
                         <div class="field-hint" style="margin-top:8px;color:#c53d3d;">این محصول فعلاً موجود نیست.</div>
                     <?php else: ?>
@@ -908,7 +907,7 @@ ob_start();
 
                         <?php else: ?>
 
-                            <span>
+                            <span aria-hidden="true">
                                 🧦
                             </span>
 
@@ -954,7 +953,7 @@ ob_start();
         $igUseCarousel = true;
         ?>
 
-        <?php $pageCss[] = '/assets/css/instagram-gallery.css'; ?>
+        <?php $pageCss[] = '/assets/css/instagram-gallery.css?v=1004'; ?>
 
         <section class="r6-ig">
             <div class="r6-ig-inner">
@@ -994,7 +993,7 @@ ob_start();
                                                 <polygon points="9 7 17 12 9 17 9 7" />
                                             </svg></span>
                                     <?php else: ?>
-                                        <img src="<?= $h(rabeti_thumb($post['image_path'], 400, 400)) ?>" srcset="<?= $h(rabeti_srcset($post['image_path'], 400, 400)) ?>" alt="<?= $h($post['caption'] ?? 'رابطی') ?>" loading="lazy">
+                                        <img src="<?= $h(rabeti_thumb($post['image_path'], 400, 400)) ?>" srcset="<?= $h(rabeti_srcset($post['image_path'], 400, 400)) ?>" alt="<?= $h($post['caption'] ?? 'رابطی') ?>" width="400" height="400" loading="lazy" decoding="async">
                                     <?php endif; ?>
                                     <div class="r6-ig-overlay">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1045,7 +1044,7 @@ ob_start();
                                             <polygon points="9 7 17 12 9 17 9 7" />
                                         </svg></span>
                                 <?php else: ?>
-                                    <img src="<?= $h(rabeti_thumb($post['image_path'], 400, 400)) ?>" srcset="<?= $h(rabeti_srcset($post['image_path'], 400, 400)) ?>" alt="<?= $h($post['caption'] ?? 'رابطی') ?>" loading="lazy">
+                                    <img src="<?= $h(rabeti_thumb($post['image_path'], 400, 400)) ?>" srcset="<?= $h(rabeti_srcset($post['image_path'], 400, 400)) ?>" alt="<?= $h($post['caption'] ?? 'رابطی') ?>" width="400" height="400" loading="lazy" decoding="async">
                                 <?php endif; ?>
                                 <div class="r6-ig-overlay">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1065,27 +1064,55 @@ ob_start();
         </section>
 
         <!-- ═══ Lightbox ═══ -->
-        <div class="r6-ig-lightbox" id="r6IgLightbox" aria-hidden="true" role="dialog">
+        <div class="r6-ig-lightbox" id="r6IgLightbox" aria-hidden="true" inert role="dialog">
             <button type="button" class="r6-ig-lb-close" aria-label="بستن">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
             </button>
             <div class="r6-ig-lb-stage">
-                <img id="r6IgLbImg" src="" alt="">
-                <video id="r6IgLbVid" src="" controls playsinline style="display:none;"></video>
+                <img id="r6IgLbImg" alt="">
+                <video id="r6IgLbVid" controls playsinline style="display:none;"></video>
             </div>
             <div class="r6-ig-lb-caption" id="r6IgLbCaption"></div>
         </div>
 
-        <!-- ⭐ اسکریپت گالری به فایل خارجی منتقل شد + defer (کاهش TBT) -->
+        <!-- ⭐ FIX: اسکریپت کاروسل/لایت‌باکس اینستاگرام قبلاً اصلاً لود نمی‌شد و
+             دکمه‌های قبلی/بعدی/لایت‌باکس مرده بودند؛ حالا با defer لود می‌شود -->
+    <!-- ⭐ [Lighthouse/TBT] اسکریپت‌های زیر فولد بعد از اولین تعامل کاربر یا idle
+         بعد از رویداد load بارگذاری می‌شوند — خارج از پنجرهٔ TBT، بدون تغییر تجربه -->
+    <script>
+        (function() {
+            var r6Loaded = false;
+            var r6Urls = ['/assets/js/categories-premium.js?v=3', '/assets/js/instagram-gallery.js?v=1004'];
+            function r6Go() {
+                if (r6Loaded) return;
+                r6Loaded = true;
+                r6Urls.forEach(function(u) {
+                    var s = document.createElement('script');
+                    s.src = u;
+                    s.defer = true;
+                    document.head.appendChild(s);
+                });
+            }
+            ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function(ev) {
+                document.addEventListener(ev, r6Go, { once: true, passive: true });
+            });
+            window.addEventListener('load', function() {
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(r6Go, { timeout: 6000 });
+                } else {
+                    setTimeout(r6Go, 4000);
+                }
+            });
+        })();
+    </script>
 
     <?php endif; ?>
 
 
     <!-- ═══ HERO SLIDER JS ═══ -->
-    <!-- ⭐ به فایل خارجی منتقل شد + defer (کاهش TBT) -->
-    <!-- ═══ استایل بج «در سبد» (اگر در CSS اصلی نبود) ═══ -->
+
     <style>
         .prod-card .in-cart-badge {
             display: none;
@@ -1098,7 +1125,7 @@ ob_start();
             position: absolute;
             top: 8px;
             right: 8px;
-            background: #00666b;
+            background: #6b4a2f;
             color: #fff;
             padding: 3px 8px;
             border-radius: 999px;
@@ -1120,20 +1147,20 @@ ob_start();
             display: block;
             font-size: 1.15rem;
             font-weight: 900;
-            color: #004f53;
+            color: #4a2c1a;
             margin-bottom: 4px;
         }
 
         .prod-price-base {
             display: block;
             font-size: 0.7rem;
-            color: #8b7355;
+            color: #7d6446;   /* [Lighthouse] کنتراست ۵.۵۵ */
             margin-bottom: 6px;
         }
 
         .prod-price-badge {
             font-size: 0.72rem;
-            color: #b8860b;
+            color: #936b08;   /* [Lighthouse] کنتراست ۴.۵ روی #fdf8e9 */
             font-weight: 700;
             background: #fdf8e9;
             padding: 4px 8px;
@@ -1287,7 +1314,7 @@ ob_start();
 
             /* ─────── همگام‌سازی آیکون‌های سبد ─────── */
             function syncCartIndicators() {
-                if (window.RABETI_AUTH !== true) return;
+                /* ⭐ مهمان‌پسند: سبد مهمان از session خوانده می‌شود */
 
                 fetch('/api/cart', {
                         method: 'GET',
@@ -1327,12 +1354,8 @@ ob_start();
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    /* ⭐ مهمان → مودال ثبت‌نام */
-                    if (window.RABETI_AUTH !== true) {
-                        if (typeof showToast === 'function') showToast('🔒 برای افزودن به سبد، ابتدا وارد شوید یا ثبت‌نام کنید');
-                        if (typeof openAuthModal === 'function') openAuthModal('register');
-                        return;
-                    }
+                    /* ⭐ خرید مهمان‌پسند: مهمان هم به سبد session اضافه می‌کند؛
+                       ورود/ثبت‌نام فقط در مرحلهٔ آخر (checkout-review) انجام می‌شود */
 
                     var card = btn.closest('[data-product-id]');
                     if (!card) return;
@@ -1409,10 +1432,8 @@ ob_start();
                 });
             });
 
-            /* ─────── بارگذاری اولیه آیکون‌ها ─────── */
-            if (window.RABETI_AUTH === true) {
-                syncCartIndicators();
-            }
+            /* ─────── بارگذاری اولیه آیکون‌ها (مهمان و کاربر) ─────── */
+            syncCartIndicators();
         })();
     </script>
 
@@ -1493,17 +1514,29 @@ ob_start();
                 });
             });
 
-            // توقف در هاور
-            hero.addEventListener('mouseenter', function() {
-                if (timer) clearInterval(timer);
-            });
+            // ⭐ a11y/WCAG: توقف با فوکوس کیبورد + احترام به prefers-reduced-motion
+            var reducedMotion = false;
+            try {
+                reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            } catch (errMq) { reducedMotion = false; }
+
+            function stopAutoPlay() {
+                if (timer) { clearInterval(timer); timer = null; }
+            }
+
+            // توقف در هاور / فوکوس داخل اسلایدر
+            hero.addEventListener('mouseenter', stopAutoPlay);
             hero.addEventListener('mouseleave', function() {
-                restartAutoPlay();
+                if (!reducedMotion) restartAutoPlay();
+            });
+            hero.addEventListener('focusin', stopAutoPlay);
+            hero.addEventListener('focusout', function() {
+                if (!reducedMotion) restartAutoPlay();
             });
 
-            // شروع
+            // شروع — با prefers-reduced-motion فقط اسلاید اول، بدون چرخش
             showSlide(0);
-            restartAutoPlay();
+            if (!reducedMotion) restartAutoPlay();
         });
     </script>
     <?php

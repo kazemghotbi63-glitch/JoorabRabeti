@@ -118,37 +118,9 @@ if (
     rate_limit_clear('login_mobile', $mobile);
 
     $_SESSION['customer_id'] = (int)$customer['id'];
-    // ═══ ادغام سبد مهمان با سبد کاربر ═══
-    if (!empty($_SESSION['guest_cart']) && is_array($_SESSION['guest_cart'])) {
-        $db = db();
-        $customerId = (int)$customer['id'];
-
-        // گرفتن یا ساخت سبد فعال کاربر
-        $stmt = $db->prepare("SELECT id FROM carts WHERE user_id = ? AND status='active' LIMIT 1");
-        $stmt->execute([$customerId]);
-        $cartId = (int)($stmt->fetchColumn() ?: 0);
-
-        if ($cartId === 0) {
-            $db->prepare("INSERT INTO carts (user_id) VALUES (?)")->execute([$customerId]);
-            $cartId = (int)$db->lastInsertId();
-        }
-
-        // انتقال اقلام مهمان به سبد کاربر
-        foreach ($_SESSION['guest_cart'] as $pid => $qty) {
-            $pid = (int)$pid;
-            $qty = (int)$qty;
-            if ($pid < 1 || $qty < 1) continue;
-
-            $db->prepare("
-            INSERT INTO cart_items (cart_id, product_id, qty)
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)
-        ")->execute([$cartId, $pid, $qty]);
-        }
-
-        // پاک کردن سبد مهمان
-        unset($_SESSION['guest_cart']);
-    }
+    // ═══ خرید مهمان‌پسند: ادغام سبد مهمان + ارتقای آدرس مرحله آخر ═══
+    rabeti_merge_guest_cart(db());
+    rabeti_promote_guest_address(db(), (int)$customer['id']);
     $_SESSION['pw_fp'] = session_password_fingerprint((string)$customer['password_hash']);
 
     $_SESSION['customer_name'] =

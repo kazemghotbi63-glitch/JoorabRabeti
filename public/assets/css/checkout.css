@@ -1,0 +1,36 @@
+/* ════════════════════════════════════════════════════════════════
+   checkout.css  —  تولیدشده توسط ابزار تفکیک CSS (از app.css)
+   سایت: joorabrabeti.ir
+   ════════════════════════════════════════════════════════════════ */
+
+/* ═══ Checkout ═══ */
+.checkout-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+@media (min-width: 900px) {
+  .checkout-grid {
+    grid-template-columns: 1fr 1.5fr;
+    align-items: start;
+  }
+}
+
+.checkout-summary {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  padding: 18px 20px;
+}
+
+.checkout-summary > b {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+
+.checkout-form {
+  max-width: 100%;
+}

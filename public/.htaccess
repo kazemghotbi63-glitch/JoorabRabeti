@@ -10,7 +10,10 @@ ServerSignature Off
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    RewriteCond %{HTTP_HOST} ^(www\.)?jorabrabeti\.ir$ [NC]
+    # ⭐ FIX: دامنه‌ی کد (canonical/og) «joorabrabeti.ir» است ولی ریدایرکت فقط
+    #     «jorabrabeti.ir» را پوشش می‌داد؛ حالا هر دو املای موجود + www پوشش داده
+    #     می‌شود. (اگر دامنه واقعی دیگری است، فقط این شرط را ویرایش کنید.)
+    RewriteCond %{HTTP_HOST} ^(www\.)?(jorabrabeti\.ir|joorabrabeti\.ir)$ [NC]
     RewriteCond %{HTTPS} !=on
     RewriteCond %{HTTP:X-Forwarded-Proto} !=https
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
@@ -88,6 +91,11 @@ DirectoryIndex index.php index.html
     RewriteRule ^uploads/(receipts|custom-orders)/ - [F,L]
     # ط§ط¬ط±ط§غŒ ط§ط³ع©ط±غŒظ¾طھ ط¯ط§ط®ظ„ uploads ظ…ظ…ظ†ظˆط¹
     RewriteRule ^uploads/.*\.(php[0-9]?|phtml|phar|phps|cgi|pl|py|sh)$ - [F,L,NC]
+
+    # ⭐ SEO: sitemap.xml استاتیکِ قدیمی (۵ URL) از روتینگ جلوگیری می‌کرد؛
+    #     حالا خروجی داینامیک و کامل sitemap.php سرو می‌شود (همان چیزی که
+    #     robots.txt معرفی کرده است). فایل استاتیک را هم در استقرار حذف کنید.
+    RewriteRule ^sitemap\.xml$ sitemap.php [L,QSA]
 
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d

@@ -600,6 +600,97 @@ function require_customer(): void
 
 
 /* ═══════════════════════════════════════════════════════════════
+   خرید مهمان‌پسند — helper های مشترک (login / register / checkout)
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * ادغام سبد مهمان (session) با سبد فعال کاربر.
+ * بعد از ورود/ثبت‌نام در هر نقطه‌ای از فرآیند خرید صدا زده می‌شود تا
+ * «سبد قبل از ورود ذخیره شود و بعد از ورود ادامه پیدا کند».
+ */
+function rabeti_merge_guest_cart(PDO $db): void
+{
+    if (empty($_SESSION['customer_id'])) {
+        return;
+    }
+    if (empty($_SESSION['guest_cart']) || !is_array($_SESSION['guest_cart'])) {
+        return;
+    }
+
+    $userId = (int)$_SESSION['customer_id'];
+
+    $stmt = $db->prepare("SELECT id FROM carts WHERE user_id = ? AND status='active' LIMIT 1");
+    $stmt->execute([$userId]);
+    $cartId = (int)($stmt->fetchColumn() ?: 0);
+
+    if ($cartId === 0) {
+        $db->prepare("INSERT INTO carts (user_id) VALUES (?)")->execute([$userId]);
+        $cartId = (int)$db->lastInsertId();
+    }
+
+    foreach ($_SESSION['guest_cart'] as $pid => $qty) {
+        $pid = (int)$pid;
+        $qty = (int)$qty;
+        if ($pid < 1 || $qty < 1) {
+            continue;
+        }
+
+        $db->prepare("
+            INSERT INTO cart_items (cart_id, product_id, qty)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)
+        ")->execute([$cartId, $pid, $qty]);
+    }
+
+    unset($_SESSION['guest_cart']);
+}
+
+/**
+ * ارتقای آدرس مهمان (session) به آدرس واقعی مشتری در مرحله آخر خرید.
+ * اگر مشتری قبلاً آدرس انتخاب کرده باشد، کاری نمی‌کند.
+ */
+function rabeti_promote_guest_address(PDO $db, int $userId): void
+{
+    if ($userId <= 0) {
+        return;
+    }
+    if ((int)($_SESSION['checkout_address_id'] ?? 0) > 0) {
+        return;
+    }
+    if (empty($_SESSION['checkout_guest_address']) || !is_array($_SESSION['checkout_guest_address'])) {
+        return;
+    }
+
+    if (!class_exists('AddressService')) {
+        require_once ROOT_PATH . '/app/services/AddressService.php';
+    }
+
+    $ga = $_SESSION['checkout_guest_address'];
+
+    try {
+        $addressId = AddressService::create($userId, [
+            'label'           => (string)($ga['label'] ?? '') !== '' ? (string)$ga['label'] : 'آدرس ارسال',
+            'province'        => (string)($ga['province'] ?? ''),
+            'city'            => (string)($ga['city'] ?? ''),
+            'address'         => (string)($ga['address'] ?? ''),
+            'postal_code'     => (string)($ga['postal_code'] ?? ''),
+            'plate_no'        => (string)($ga['plate_no'] ?? ''),
+            'unit_no'         => (string)($ga['unit_no'] ?? ''),
+            'receiver_name'   => (string)($ga['receiver_name'] ?? ''),
+            'receiver_mobile' => (string)($ga['receiver_mobile'] ?? ''),
+            'is_default'      => false,
+        ]);
+
+        $_SESSION['checkout_address_id'] = (int)$addressId;
+        unset($_SESSION['checkout_guest_address']);
+    } catch (Throwable $e) {
+        /* آدرس نامعتبر → کاربر در checkout-address دوباره ثبت می‌کند */
+        error_log('[rabeti_promote_guest_address] ' . $e->getMessage());
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
    نام کاربر
 ═══════════════════════════════════════════════════════════════ */
 
